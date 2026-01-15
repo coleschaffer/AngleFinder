@@ -195,7 +195,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Session management
   const saveSession = useCallback(() => {
+    // Don't save if we're viewing an existing session
+    if (currentSession) return;
     if (!wizard.niche || wizard.results.length === 0) return;
+
+    // Get the sources that were actually analyzed
+    const analyzedSources = wizard.discoveredSources.filter(s =>
+      wizard.selectedSources.includes(s.id)
+    );
 
     const session: Session = {
       id: crypto.randomUUID(),
@@ -206,16 +213,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       strategy: wizard.strategy!,
       categories: wizard.selectedCategories,
       sourceTypes: wizard.selectedSourceTypes,
+      sources: analyzedSources,
       results: wizard.results,
     };
 
     setSessions(prev => [session, ...prev]);
     setCurrentSession(session);
-  }, [wizard, setSessions]);
+  }, [wizard, setSessions, currentSession]);
 
   const loadSession = useCallback((sessionId: string) => {
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
+
+    // Don't reload if already viewing this session
+    if (currentSession?.id === sessionId) return;
 
     setCurrentSession(session);
     setWizard({
@@ -227,9 +238,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       strategy: session.strategy,
       selectedCategories: session.categories,
       selectedSourceTypes: session.sourceTypes,
+      discoveredSources: session.sources || [],
+      selectedSources: (session.sources || []).map(s => s.id),
       results: session.results,
     });
-  }, [sessions]);
+  }, [sessions, currentSession]);
 
   const deleteSession = useCallback((sessionId: string) => {
     setSessions(prev => prev.filter(s => s.id !== sessionId));

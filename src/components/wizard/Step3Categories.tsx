@@ -80,24 +80,23 @@ export function Step3Categories() {
             >
               <div className="flex items-start justify-between">
                 <span className="text-sm font-medium">{category.name}</span>
-                {isSelected && (
-                  <Check className="w-4 h-4 text-[var(--ca-gold)]" />
-                )}
-              </div>
-              {category.isCustom && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[10px] text-[var(--ca-gray-light)]">Custom</span>
-                  <button
-                    onClick={e => {
-                      e.stopPropagation();
-                      removeCustomCategory(wizard.niche!, wizard.strategy!, category.id);
-                    }}
-                    className="p-0.5 rounded hover:bg-[var(--ca-gray-dark)]"
-                  >
-                    <X className="w-3 h-3 text-[var(--ca-gray-light)]" />
-                  </button>
+                <div className="flex items-center gap-1">
+                  {category.isCustom && (
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        removeCustomCategory(wizard.niche!, wizard.strategy!, category.id);
+                      }}
+                      className="p-0.5 rounded hover:bg-[var(--ca-gray-dark)]"
+                    >
+                      <X className="w-3 h-3 text-[var(--ca-gray-light)]" />
+                    </button>
+                  )}
+                  {isSelected && (
+                    <Check className="w-4 h-4 text-[var(--ca-gold)]" />
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

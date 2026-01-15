@@ -25,7 +25,7 @@ export function Step4SourceTypes() {
       id: 'podcast',
       name: 'Podcasts',
       icon: Radio,
-      description: 'Find long-form podcast episodes (30+ min) on YouTube',
+      description: 'Find podcast episodes on YouTube',
       available: true,
     },
     {

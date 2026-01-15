@@ -102,6 +102,7 @@ export interface Session {
   strategy: SourceStrategy;
   categories: string[];
   sourceTypes: SourceType[];
+  sources: Source[]; // The actual sources that were analyzed
   results: AnalysisResult[];
 }
 

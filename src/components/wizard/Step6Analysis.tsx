@@ -17,9 +17,9 @@ export function Step6Analysis() {
   } = useApp();
 
   const [statusMessages, setStatusMessages] = useState<
-    { id: string; message: string; status: 'pending' | 'success' | 'error' }[]
+    { id: string; message: string; status: 'pending' | 'analyzing' | 'success' | 'error' }[]
   >([]);
-  const [currentSource, setCurrentSource] = useState<string | null>(null);
+  const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const hasStarted = useRef(false);
 
   const getNicheName = () => {
@@ -53,20 +53,20 @@ export function Step6Analysis() {
       const batchSize = 3;
       for (let i = 0; i < sources.length; i += batchSize) {
         const batch = sources.slice(i, i + batchSize);
+        const batchIds = new Set(batch.map(s => s.id));
+
+        // Mark all sources in this batch as "analyzing"
+        setAnalyzingIds(batchIds);
+        setStatusMessages(prev =>
+          prev.map(s =>
+            batchIds.has(s.id)
+              ? { ...s, message: `Analyzing: ${sources.find(src => src.id === s.id)?.title.slice(0, 50)}...`, status: 'analyzing' as const }
+              : s
+          )
+        );
 
         const batchResults = await Promise.all(
           batch.map(async source => {
-            setCurrentSource(source.id);
-
-            // Update status to "analyzing"
-            setStatusMessages(prev =>
-              prev.map(s =>
-                s.id === source.id
-                  ? { ...s, message: `Analyzing: ${source.title.slice(0, 50)}...`, status: 'pending' as const }
-                  : s
-              )
-            );
-
             try {
               const response = await fetch('/api/analyze', {
                 method: 'POST',
@@ -122,7 +122,7 @@ export function Step6Analysis() {
       }
 
       setIsAnalyzing(false);
-      setCurrentSource(null);
+      setAnalyzingIds(new Set());
       setResults(allResults);
 
       // Auto-save session and advance to results
@@ -175,43 +175,46 @@ export function Step6Analysis() {
 
       {/* Status Messages */}
       <div className="space-y-2">
-        {statusMessages.map(status => (
-          <div
-            key={status.id}
-            className={`flex items-center gap-3 p-3 rounded-lg ${
-              status.status === 'success'
-                ? 'bg-green-500/10 border border-green-500/20'
-                : status.status === 'error'
-                ? 'bg-red-500/10 border border-red-500/20'
-                : currentSource === status.id
-                ? 'bg-[var(--ca-gold)]/10 border border-[var(--ca-gold)]/20'
-                : 'bg-[var(--ca-gray-dark)] border border-transparent'
-            }`}
-          >
-            {status.status === 'success' ? (
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-            ) : status.status === 'error' ? (
-              <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-            ) : currentSource === status.id ? (
-              <Loader2 className="w-5 h-5 text-[var(--ca-gold)] animate-spin flex-shrink-0" />
-            ) : (
-              <div className="w-5 h-5 rounded-full border-2 border-[var(--ca-gray)] flex-shrink-0" />
-            )}
-            <span
-              className={`text-sm ${
+        {statusMessages.map(status => {
+          const isAnalyzing = status.status === 'analyzing';
+          return (
+            <div
+              key={status.id}
+              className={`flex items-center gap-3 p-3 rounded-lg ${
                 status.status === 'success'
-                  ? 'text-green-400'
+                  ? 'bg-green-500/10 border border-green-500/20'
                   : status.status === 'error'
-                  ? 'text-red-400'
-                  : currentSource === status.id
-                  ? 'text-[var(--ca-gold)]'
-                  : 'text-[var(--ca-gray-light)]'
+                  ? 'bg-red-500/10 border border-red-500/20'
+                  : isAnalyzing
+                  ? 'bg-[var(--ca-gold)]/10 border border-[var(--ca-gold)]/20'
+                  : 'bg-[var(--ca-gray-dark)] border border-transparent'
               }`}
             >
-              {status.message}
-            </span>
-          </div>
-        ))}
+              {status.status === 'success' ? (
+                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+              ) : status.status === 'error' ? (
+                <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              ) : isAnalyzing ? (
+                <Loader2 className="w-5 h-5 text-[var(--ca-gold)] animate-spin flex-shrink-0" />
+              ) : (
+                <div className="w-5 h-5 rounded-full border-2 border-[var(--ca-gray)] flex-shrink-0" />
+              )}
+              <span
+                className={`text-sm ${
+                  status.status === 'success'
+                    ? 'text-green-400'
+                    : status.status === 'error'
+                    ? 'text-red-400'
+                    : isAnalyzing
+                    ? 'text-[var(--ca-gold)]'
+                    : 'text-[var(--ca-gray-light)]'
+                }`}
+              >
+                {status.message}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Tips while waiting */}
@@ -221,8 +224,8 @@ export function Step6Analysis() {
           <div>
             <h4 className="text-sm font-medium mb-1">Analysis in Progress</h4>
             <p className="text-xs text-[var(--ca-gray-light)]">
-              We&apos;re extracting transcripts, identifying surprising claims, and generating
-              breakthrough hooks using Stefan Georgi&apos;s framework. This may take a few minutes.
+              We&apos;re extracting transcripts, identifying claims, and generating
+              breakthrough angles. This may take a few minutes.
             </p>
           </div>
         </div>

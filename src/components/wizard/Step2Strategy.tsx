@@ -19,7 +19,7 @@ export function Step2Strategy() {
       title: 'Translocate',
       icon: Shuffle,
       description:
-        'Find marketing angles from completely UNRELATED fields to discover unique, unexpected connections your competitors will never find.',
+        'Find marketing angles from completely unrelated fields to discover unique, unexpected connections.',
       benefits: [
         'Discover angles no competitor will find',
         'Create memorable, unique hooks',
@@ -60,7 +60,7 @@ export function Step2Strategy() {
               onClick={() => setStrategy(strategy.id)}
               className={`card card-hover text-left transition-all ${
                 isSelected
-                  ? 'border-[var(--ca-gold)] bg-[rgba(212,175,55,0.05)]'
+                  ? 'border-[var(--ca-gold)] bg-[rgba(212,175,55,0.05)] shadow-[0_0_20px_rgba(212,175,55,0.3)]'
                   : ''
               }`}
             >
@@ -74,12 +74,7 @@ export function Step2Strategy() {
                 >
                   <Icon className="w-6 h-6" />
                 </div>
-                <div>
-                  <h3 className="font-semibold text-lg">{strategy.title}</h3>
-                  {isSelected && (
-                    <span className="text-xs text-[var(--ca-gold)]">Selected</span>
-                  )}
-                </div>
+                <h3 className="font-semibold text-lg">{strategy.title}</h3>
               </div>
 
               <p className="text-sm text-[var(--ca-gray-light)] mb-4">

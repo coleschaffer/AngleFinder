@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { Source, SourceType, SortBy } from '@/types';
+import { Source, SourceType } from '@/types';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
+const execAsync = promisify(exec);
 const anthropic = new Anthropic();
 
 interface DiscoverRequest {
@@ -10,87 +13,77 @@ interface DiscoverRequest {
   strategy: 'translocate' | 'direct';
   categories: string[];
   sourceTypes: SourceType[];
-  sortBy: SortBy;
   page: number;
 }
 
-// YouTube Data API search
-async function searchYouTube(query: string, isPodcast: boolean = false): Promise<Source[]> {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) {
-    console.warn('YouTube API key not configured');
-    return [];
+// Format duration from seconds to MM:SS or HH:MM:SS
+function formatDuration(seconds: number | null): string {
+  if (!seconds) return '';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
+// YouTube search using yt-dlp (no API key needed)
+async function searchYouTube(query: string, isPodcast: boolean = false): Promise<Source[]> {
   try {
-    const params = new URLSearchParams({
-      part: 'snippet',
-      q: isPodcast ? `${query} podcast interview episode` : query,
-      type: 'video',
-      maxResults: '10',
-      order: 'viewCount',
-      key: apiKey,
-      videoDuration: isPodcast ? 'long' : 'medium', // long = >20min for podcasts
-    });
+    const searchQuery = isPodcast
+      ? `${query} podcast interview episode`
+      : query;
 
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
-    if (!response.ok) throw new Error('YouTube search failed');
-
-    const data = await response.json();
-
-    // Get video statistics for view counts
-    const videoIds = data.items.map((item: any) => item.id.videoId).join(',');
-    const statsResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=statistics,contentDetails&id=${videoIds}&key=${apiKey}`
-    );
-    const statsData = await statsResponse.json();
-    const statsMap = new Map<string, { views: number; duration: string }>(
-      statsData.items?.map((item: any) => [
-        item.id,
-        {
-          views: parseInt(item.statistics?.viewCount || '0'),
-          duration: item.contentDetails?.duration || '',
-        },
-      ]) || []
+    // Use yt-dlp to search YouTube
+    const searchCount = 15;
+    const escapedQuery = searchQuery.replace(/"/g, '\\"');
+    const { stdout } = await execAsync(
+      `yt-dlp "ytsearch${searchCount}:${escapedQuery}" --flat-playlist -J`,
+      { timeout: 30000 }
     );
 
-    return data.items.map((item: any) => {
-      const stats = statsMap.get(item.id.videoId) ?? { views: 0, duration: '' };
-      return {
-        id: `youtube-${item.id.videoId}`,
-        type: isPodcast ? 'podcast' as SourceType : 'youtube' as SourceType,
-        title: item.snippet.title,
-        url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-        views: stats.views,
-        author: item.snippet.channelTitle,
-        publishDate: item.snippet.publishedAt,
-        duration: formatDuration(stats.duration),
-      };
-    });
+    const data = JSON.parse(stdout);
+    const entries = data.entries || [];
+
+    const videos: Source[] = [];
+
+    for (const entry of entries) {
+      const videoId = entry.id;
+      const title = entry.title || 'Untitled';
+      const author = entry.channel || entry.uploader || 'Unknown';
+      const views = entry.view_count || 0;
+      const durationSecs = entry.duration || 0;
+      const duration = formatDuration(durationSecs);
+
+      // For podcasts, filter for longer videos (over 20 minutes)
+      if (isPodcast) {
+        const totalMinutes = durationSecs / 60;
+        if (totalMinutes < 20) continue;
+      }
+
+      videos.push({
+        id: `${isPodcast ? 'podcast' : 'youtube'}-${videoId}`,
+        type: isPodcast ? 'podcast' : 'youtube',
+        title,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        views,
+        author,
+        duration,
+      });
+
+      if (videos.length >= 10) break;
+    }
+
+    return videos;
   } catch (error) {
     console.error('YouTube search error:', error);
     return [];
   }
 }
 
-// Format ISO 8601 duration to human readable
-function formatDuration(isoDuration: string): string {
-  if (!isoDuration) return '';
-  const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!match) return '';
-
-  const hours = match[1] ? parseInt(match[1]) : 0;
-  const minutes = match[2] ? parseInt(match[2]) : 0;
-  const seconds = match[3] ? parseInt(match[3]) : 0;
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
 // Reddit API search
-async function searchReddit(query: string, strategy: string): Promise<Source[]> {
+async function searchReddit(query: string): Promise<Source[]> {
   const clientId = process.env.REDDIT_CLIENT_ID;
   const clientSecret = process.env.REDDIT_CLIENT_SECRET;
 
@@ -114,9 +107,9 @@ async function searchReddit(query: string, strategy: string): Promise<Source[]> 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // Search posts
+    // Search posts - sort by relevance
     const searchResponse = await fetch(
-      `https://oauth.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=top&limit=10`,
+      `https://oauth.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&limit=10`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -144,24 +137,50 @@ async function searchReddit(query: string, strategy: string): Promise<Source[]> 
   }
 }
 
-// PubMed search
+// PubMed search (no API key required, but need to identify ourselves)
 async function searchPubMed(query: string): Promise<Source[]> {
   try {
+    // NCBI recommends identifying your tool
+    const toolParams = 'tool=AngleFinder&email=contact@anglefinder.app';
+
     // Search for article IDs
     const searchResponse = await fetch(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=10&retmode=json`
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=10&retmode=json&sort=relevance&${toolParams}`
     );
-    if (!searchResponse.ok) throw new Error('PubMed search failed');
+    if (!searchResponse.ok) {
+      console.error('PubMed search status:', searchResponse.status, searchResponse.statusText);
+      return [];
+    }
     const searchData = await searchResponse.json();
     const ids = searchData.esearchresult?.idlist || [];
 
     if (ids.length === 0) return [];
 
-    // Get article summaries
+    // Small delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 350));
+
+    // Get article summaries - use POST for reliability
     const summaryResponse = await fetch(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${ids.join(',')}&retmode=json`
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&${toolParams}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `id=${ids.join(',')}`,
+      }
     );
-    if (!summaryResponse.ok) throw new Error('PubMed summary failed');
+
+    if (!summaryResponse.ok) {
+      console.error('PubMed summary status:', summaryResponse.status, summaryResponse.statusText);
+      // Return basic results without full metadata if summary fails
+      return ids.map((id: string) => ({
+        id: `pubmed-${id}`,
+        type: 'pubmed' as SourceType,
+        title: `PubMed Article ${id}`,
+        url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+        author: 'Unknown',
+      }));
+    }
+
     const summaryData = await summaryResponse.json();
 
     return ids.map((id: string) => {
@@ -175,7 +194,7 @@ async function searchPubMed(query: string): Promise<Source[]> {
         author: article.authors?.[0]?.name || 'Unknown',
         publishDate: article.pubdate,
       };
-    }).filter(Boolean);
+    }).filter(Boolean) as Source[];
   } catch (error) {
     console.error('PubMed search error:', error);
     return [];
@@ -185,20 +204,27 @@ async function searchPubMed(query: string): Promise<Source[]> {
 export async function POST(request: NextRequest) {
   try {
     const body: DiscoverRequest = await request.json();
-    const { niche, product, strategy, categories, sourceTypes, sortBy, page } = body;
+    const { niche, product, strategy, categories, sourceTypes, page } = body;
 
     // Use Claude to generate optimal search queries
-    const queryPrompt = `Generate ${sourceTypes.length * 2} specific search queries to find content about these topics:
+    const queryPrompt = `Generate ${Math.max(sourceTypes.length * 2, 4)} specific search queries to find content about these topics.
 
-Categories: ${categories.join(', ')}
+Categories to explore: ${categories.join(', ')}
 Niche context: ${niche}
 Product: ${product}
-Strategy: ${strategy === 'translocate' ? 'Find content from UNRELATED fields that could provide unique marketing angles' : 'Find content directly related to this niche'}
+Strategy: ${strategy === 'translocate' ? 'Find content from UNRELATED fields that could provide unique, unexpected marketing angles' : 'Find content directly related to this niche with scientific backing'}
 
-Return ONLY a JSON array of search query objects with format:
-[{"query": "search query text", "sourceType": "youtube|podcast|reddit|pubmed"}]
+For each query, specify which source type it's best suited for based on what the user selected: ${sourceTypes.join(', ')}
 
-Make queries specific, interesting, and likely to surface surprising/counterintuitive content. For translocate strategy, focus on finding connections from unrelated fields. For direct strategy, focus on cutting-edge research and expert insights.`;
+Return ONLY a valid JSON array with this exact format (no other text):
+[{"query": "specific search terms", "sourceType": "${sourceTypes[0]}"}]
+
+Guidelines:
+- Make queries specific and likely to surface surprising, counterintuitive content
+- For YouTube/podcasts: use terms that would find expert discussions, interviews, or educational content
+- For Reddit: include relevant subreddit-style terms or community language
+- For PubMed: use scientific/medical terminology
+- ${strategy === 'translocate' ? 'Focus on unexpected connections from unrelated fields' : 'Focus on cutting-edge research and expert insights'}`;
 
     const queryResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -210,19 +236,22 @@ Make queries specific, interesting, and likely to surface surprising/counterintu
     const queryText = queryResponse.content[0].type === 'text' ? queryResponse.content[0].text : '';
 
     try {
-      const jsonMatch = queryText.match(/\[[\s\S]*\]/);
+      const jsonMatch = queryText.match(/\[[\s\S]*?\]/);
       if (jsonMatch) {
         searchQueries = JSON.parse(jsonMatch[0]);
       }
     } catch (e) {
+      console.error('Failed to parse Claude response:', e);
       // Fallback queries if parsing fails
       searchQueries = categories.flatMap(cat =>
         sourceTypes.map(type => ({
-          query: `${cat} ${niche} ${strategy === 'translocate' ? 'insights' : 'research'}`,
+          query: `${cat} ${niche} ${strategy === 'translocate' ? 'insights surprising' : 'research science'}`,
           sourceType: type,
         }))
       ).slice(0, 6);
     }
+
+    console.log('Generated search queries:', searchQueries);
 
     // Execute searches in parallel
     const searchPromises: Promise<Source[]>[] = [];
@@ -235,7 +264,7 @@ Make queries specific, interesting, and likely to surface surprising/counterintu
         searchPromises.push(searchYouTube(sq.query, true));
       }
       if (sq.sourceType === 'reddit' && sourceTypes.includes('reddit')) {
-        searchPromises.push(searchReddit(sq.query, strategy));
+        searchPromises.push(searchReddit(sq.query));
       }
       if (sq.sourceType === 'pubmed' && sourceTypes.includes('pubmed')) {
         searchPromises.push(searchPubMed(sq.query));
@@ -245,20 +274,14 @@ Make queries specific, interesting, and likely to surface surprising/counterintu
     const results = await Promise.all(searchPromises);
     let allSources = results.flat();
 
+    console.log(`Found ${allSources.length} total sources`);
+
     // Remove duplicates by URL
     const seen = new Set<string>();
     allSources = allSources.filter(source => {
       if (seen.has(source.url)) return false;
       seen.add(source.url);
       return true;
-    });
-
-    // Sort by views or engagement
-    allSources.sort((a, b) => {
-      if (sortBy === 'engagement') {
-        return (b.engagement || b.views || 0) - (a.engagement || a.views || 0);
-      }
-      return (b.views || 0) - (a.views || 0);
     });
 
     // Paginate - 20 per page

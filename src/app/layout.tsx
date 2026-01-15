@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Angle Finder | CA Pro",
   description: "Generate breakthrough marketing angles and hooks using Stefan Georgi's framework",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

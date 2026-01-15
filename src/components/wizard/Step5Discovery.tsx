@@ -17,10 +17,8 @@ import {
   AlertCircle,
   Loader2,
   ChevronDown,
-  Eye,
-  TrendingUp,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const sourceIcons: Record<SourceType, typeof Youtube> = {
   youtube: Youtube,
@@ -38,19 +36,19 @@ export function Step5Discovery() {
     toggleSourceSelection,
     selectAllSources,
     deselectAllSources,
-    setSortBy,
   } = useApp();
 
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
+  const hasAutoSearched = useRef(false);
 
   const getCategoryNames = () => {
     if (!wizard.niche || !wizard.strategy) return [];
-    const categories = CATEGORIES[wizard.niche]?.[wizard.strategy] || [];
+    const builtInCategories = CATEGORIES[wizard.niche]?.[wizard.strategy] || [];
     return wizard.selectedCategories
-      .map(id => categories.find(c => c.id === id)?.name)
+      .map(id => builtInCategories.find(c => c.id === id)?.name || id)
       .filter(Boolean) as string[];
   };
 
@@ -74,7 +72,6 @@ export function Step5Discovery() {
           strategy: wizard.strategy,
           categories: getCategoryNames(),
           sourceTypes: wizard.selectedSourceTypes,
-          sortBy: wizard.sortBy,
           page: 1,
         }),
       });
@@ -105,7 +102,6 @@ export function Step5Discovery() {
           strategy: wizard.strategy,
           categories: getCategoryNames(),
           sourceTypes: wizard.selectedSourceTypes,
-          sortBy: wizard.sortBy,
           page: nextPage,
         }),
       });
@@ -122,8 +118,16 @@ export function Step5Discovery() {
     }
   };
 
+  // Auto-search when page loads
+  useEffect(() => {
+    if (!hasAutoSearched.current && !hasSearched) {
+      hasAutoSearched.current = true;
+      handleSearch();
+    }
+  }, []);
+
   const formatViews = (views?: number) => {
-    if (!views) return 'N/A';
+    if (!views) return null;
     if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
     if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
     return views.toString();
@@ -141,56 +145,25 @@ export function Step5Discovery() {
         </p>
       </div>
 
-      {/* Search Controls */}
-      <div className="card mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-2">Sort By</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSortBy('views')}
-                className={`flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                  wizard.sortBy === 'views'
-                    ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-                    : 'bg-[var(--ca-gray-dark)] text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray)]'
-                }`}
-              >
-                <Eye className="w-4 h-4" />
-                Most Views
-              </button>
-              <button
-                onClick={() => setSortBy('engagement')}
-                className={`flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                  wizard.sortBy === 'engagement'
-                    ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-                    : 'bg-[var(--ca-gray-dark)] text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray)]'
-                }`}
-              >
-                <TrendingUp className="w-4 h-4" />
-                Most Engagement
-              </button>
-            </div>
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={handleSearch}
-              disabled={isSearching}
-              className="btn btn-primary w-full sm:w-auto"
-            >
-              {isSearching ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Searching...
-                </>
-              ) : (
-                <>
-                  <Search className="w-4 h-4" />
-                  Search Sources
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+      {/* Search Button */}
+      <div className="flex justify-center mb-8">
+        <button
+          onClick={handleSearch}
+          disabled={isSearching}
+          className="btn btn-primary px-8 py-3 text-lg"
+        >
+          {isSearching ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Searching for relevant content...
+            </>
+          ) : (
+            <>
+              <Search className="w-5 h-5" />
+              Search Sources
+            </>
+          )}
+        </button>
       </div>
 
       {/* Results */}
@@ -224,6 +197,7 @@ export function Step5Discovery() {
             {availableSources.map(source => {
               const Icon = sourceIcons[source.type];
               const isSelected = wizard.selectedSources.includes(source.id);
+              const viewCount = formatViews(source.views);
 
               return (
                 <div
@@ -256,9 +230,9 @@ export function Step5Discovery() {
                             ? `r/${source.subreddit}`
                             : 'PubMed'}
                         </span>
-                        {source.views !== undefined && (
+                        {viewCount && (
                           <span className="text-xs text-[var(--ca-gray-light)]">
-                            {formatViews(source.views)} views
+                            {viewCount} {source.type === 'reddit' ? 'upvotes' : 'views'}
                           </span>
                         )}
                         {source.duration && (

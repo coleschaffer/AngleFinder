@@ -1,9 +1,11 @@
 'use client';
 
 import { useApp } from '@/context/AppContext';
-import { AngleType, Hook, Claim } from '@/types';
+import { AngleType, Hook, Claim, SourceType } from '@/types';
 import { ClaimCard } from '@/components/results/ClaimCard';
 import { HookCard } from '@/components/results/HookCard';
+import { NICHES } from '@/data/niches';
+import { CATEGORIES } from '@/data/categories';
 import {
   Download,
   Star,
@@ -13,6 +15,15 @@ import {
   Zap,
   RefreshCw,
   ChevronDown,
+  Trash2,
+  Youtube,
+  Radio,
+  MessageSquare,
+  BookOpen,
+  ChevronUp,
+  FileText,
+  Shuffle,
+  Target,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -25,6 +36,20 @@ const ANGLE_TYPES: AngleType[] = [
   'Identity',
   'Contrarian',
 ];
+
+const sourceTypeIcons: Record<SourceType, typeof Youtube> = {
+  youtube: Youtube,
+  podcast: Radio,
+  reddit: MessageSquare,
+  pubmed: BookOpen,
+};
+
+const sourceTypeLabels: Record<SourceType, string> = {
+  youtube: 'YouTube',
+  podcast: 'Podcasts',
+  reddit: 'Reddit',
+  pubmed: 'PubMed',
+};
 
 export function Step7Results() {
   const {
@@ -39,18 +64,55 @@ export function Step7Results() {
     favoriteHooks,
     resetWizard,
     saveSession,
+    currentSession,
+    deleteSession,
+    customCategories,
   } = useApp();
 
   const [showFilters, setShowFilters] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showInputsSummary, setShowInputsSummary] = useState(true);
 
-  // Auto-save session on first load of results
+  // Auto-save session on first load of results (only for new sessions)
   useEffect(() => {
-    if (!hasSaved && wizard.results.length > 0) {
+    if (!hasSaved && wizard.results.length > 0 && !currentSession) {
       saveSession();
       setHasSaved(true);
     }
-  }, [wizard.results, hasSaved, saveSession]);
+  }, [wizard.results, hasSaved, saveSession, currentSession]);
+
+  // Get niche name for display
+  const getNicheName = () => {
+    if (wizard.niche === 'other') return wizard.customNiche;
+    return NICHES.find(n => n.id === wizard.niche)?.name || wizard.niche;
+  };
+
+  // Get category names for display
+  const getCategoryNames = () => {
+    if (!wizard.niche || !wizard.strategy) return [];
+    const builtInCategories = CATEGORIES[wizard.niche]?.[wizard.strategy] || [];
+    const customKey = `${wizard.niche}-${wizard.strategy}`;
+    const userCustomCategories = customCategories[customKey] || [];
+    const allCategories = [...builtInCategories, ...userCustomCategories];
+    return wizard.selectedCategories
+      .map(id => allCategories.find(c => c.id === id)?.name || id)
+      .filter(Boolean);
+  };
+
+  // Get analyzed sources
+  const analyzedSources = wizard.discoveredSources.filter(s =>
+    wizard.selectedSources.includes(s.id)
+  );
+
+  // Handle delete with confirmation
+  const handleDelete = () => {
+    if (currentSession) {
+      deleteSession(currentSession.id);
+      resetWizard();
+    }
+    setShowDeleteConfirm(false);
+  };
 
   // Flatten all claims and hooks from results
   const allClaims = useMemo(() => {
@@ -184,6 +246,33 @@ export function Step7Results() {
 
   return (
     <div className="animate-fade-in">
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="card w-full max-w-md mx-4 animate-slide-up">
+            <h3 className="text-lg font-semibold mb-2">Delete Session?</h3>
+            <p className="text-sm text-[var(--ca-gray-light)] mb-6">
+              This will permanently delete this research session and all its results. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="btn btn-ghost"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="btn bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Session
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
@@ -192,10 +281,125 @@ export function Step7Results() {
             {allClaims.length} claims, {allHooks.length} hooks from {wizard.results.length} sources
           </p>
         </div>
-        <button onClick={resetWizard} className="btn btn-secondary">
-          <RefreshCw className="w-4 h-4" />
-          New Research
+        <div className="flex gap-2">
+          {currentSession && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="btn btn-ghost text-red-400 hover:bg-red-500/10"
+              title="Delete this session"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <button onClick={resetWizard} className="btn btn-secondary">
+            <RefreshCw className="w-4 h-4" />
+            New Research
+          </button>
+        </div>
+      </div>
+
+      {/* Research Summary */}
+      <div className="card mb-6">
+        <button
+          onClick={() => setShowInputsSummary(!showInputsSummary)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-[var(--ca-gold)]" />
+            <span className="font-medium text-sm">Research Summary</span>
+          </div>
+          {showInputsSummary ? (
+            <ChevronUp className="w-4 h-4 text-[var(--ca-gray-light)]" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-[var(--ca-gray-light)]" />
+          )}
         </button>
+
+        {showInputsSummary && (
+          <div className="mt-4 pt-4 border-t border-[var(--ca-gray-dark)]">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Product Description */}
+              <div className="sm:col-span-2">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Product</p>
+                <p className="text-sm">{wizard.productDescription || 'No product description'}</p>
+              </div>
+
+              {/* Strategy */}
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Strategy</p>
+                <div className="flex items-center gap-2">
+                  {wizard.strategy === 'translocate' ? (
+                    <Shuffle className="w-4 h-4 text-[var(--ca-gold)]" />
+                  ) : (
+                    <Target className="w-4 h-4 text-[var(--ca-gold)]" />
+                  )}
+                  <span className="text-sm capitalize">{wizard.strategy}</span>
+                </div>
+              </div>
+
+              {/* Niche */}
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Niche</p>
+                <p className="text-sm">{getNicheName()}</p>
+              </div>
+
+              {/* Categories */}
+              <div className="sm:col-span-2">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Categories</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {getCategoryNames().map((name, i) => (
+                    <span key={i} className="tag text-xs">{name}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Source Types */}
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Source Types</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {wizard.selectedSourceTypes.map(type => {
+                    const Icon = sourceTypeIcons[type];
+                    return (
+                      <span key={type} className="tag text-xs flex items-center gap-1">
+                        <Icon className="w-3 h-3" />
+                        {sourceTypeLabels[type]}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Sources Analyzed */}
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">
+                  Sources Analyzed ({analyzedSources.length})
+                </p>
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {analyzedSources.length > 0 ? (
+                    analyzedSources.slice(0, 5).map(source => {
+                      const Icon = sourceTypeIcons[source.type];
+                      return (
+                        <div key={source.id} className="flex items-center gap-1.5 text-xs text-[var(--ca-gray-light)]">
+                          <Icon className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{source.title}</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-[var(--ca-gray-light)]">
+                      {wizard.results.length} source{wizard.results.length !== 1 ? 's' : ''} analyzed
+                    </p>
+                  )}
+                  {analyzedSources.length > 5 && (
+                    <p className="text-[10px] text-[var(--ca-gray)]">
+                      +{analyzedSources.length - 5} more
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tab Navigation */}
