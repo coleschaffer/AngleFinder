@@ -76,7 +76,7 @@ export function Step3Categories() {
                   : 'bg-[var(--ca-dark)] border-[var(--ca-gray-dark)] hover:border-[var(--ca-gray)]'
               }`}
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium truncate" title={category.name}>
                   {category.name.length > 24 ? `${category.name.slice(0, 24)}...` : category.name}
                 </span>
