@@ -665,27 +665,8 @@ export function Step7Results() {
                     </div>
                   </div>
                 )}
-                {favoriteGeneratedItems.length > 0 && (
-                  <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-[var(--ca-gold)]" />
-                      Favorite Generated ({favoriteGeneratedItems.length})
-                    </h3>
-                    <div className="space-y-4">
-                      {favoriteGeneratedItems.map(hook => (
-                        <HookCard
-                          key={hook.id}
-                          hook={hook}
-                          sourceName={hook.sourceName || 'Unknown Source'}
-                          sourceType={hook.sourceType || 'research'}
-                          sourceUrl={hook.sourceUrl || '#'}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
                 {favoriteClaimItems.length > 0 && (
-                  <div>
+                  <div className="mb-8">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                       <Lightbulb className="w-5 h-5 text-[var(--ca-gold)]" />
                       Favorite Claims ({favoriteClaimItems.length})
@@ -698,6 +679,25 @@ export function Step7Results() {
                           sourceName={claim.sourceName}
                           sourceType={claim.sourceType}
                           sourceUrl={claim.sourceUrl}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {favoriteGeneratedItems.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-[var(--ca-gold)]" />
+                      Favorite Generated ({favoriteGeneratedItems.length})
+                    </h3>
+                    <div className="space-y-4">
+                      {favoriteGeneratedItems.map(hook => (
+                        <HookCard
+                          key={hook.id}
+                          hook={hook}
+                          sourceName={hook.sourceName || 'Unknown Source'}
+                          sourceType={hook.sourceType || 'research'}
+                          sourceUrl={hook.sourceUrl || '#'}
                         />
                       ))}
                     </div>

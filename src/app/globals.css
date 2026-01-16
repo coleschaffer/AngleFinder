@@ -2,9 +2,9 @@
 
 :root {
   /* CA Pro Brand Colors - Orange Theme */
-  --ca-gold: #fc6600;
-  --ca-gold-dark: #d45500;
-  --ca-gold-light: #ff8533;
+  --ca-gold: #E77F34;
+  --ca-gold-dark: #c96a2a;
+  --ca-gold-light: #f09550;
   --ca-black: #0F0F0F;
   --ca-dark: #1A1A1A;
   --ca-gray-dark: #2A2A2A;
@@ -224,7 +224,7 @@ body {
 }
 
 .tag-gold {
-  background: rgba(252, 102, 0, 0.15);
+  background: rgba(231, 127, 52, 0.15);
   color: var(--ca-gold);
   border-color: var(--ca-gold);
 }
@@ -418,7 +418,7 @@ body {
 
 /* Textarea focus glow */
 .feedback-textarea:focus {
-  box-shadow: 0 0 0 3px rgba(252, 102, 0, 0.15);
+  box-shadow: 0 0 0 3px rgba(231, 127, 52, 0.15);
   border-color: var(--ca-gold);
 }
 
