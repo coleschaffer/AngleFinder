@@ -21,9 +21,7 @@ export function Step3Categories() {
   if (!wizard.niche || !wizard.strategy) return null;
 
   const builtInCategories = CATEGORIES[wizard.niche]?.[wizard.strategy] || [];
-  const customKey = `${wizard.niche}-${wizard.strategy}`;
-  const userCustomCategories = customCategories[customKey] || [];
-  const allCategories = [...builtInCategories, ...userCustomCategories];
+  const allCategories = [...builtInCategories, ...customCategories];
 
   const handleAddCustomCategory = () => {
     if (!customCategoryName.trim()) return;
@@ -35,7 +33,7 @@ export function Step3Categories() {
       isCustom: true,
     };
 
-    addCustomCategory(wizard.niche!, wizard.strategy!, newCategory);
+    addCustomCategory(newCategory);
     // Auto-select the newly created category
     toggleCategory(newCategoryId);
     setCustomCategoryName('');
@@ -78,14 +76,16 @@ export function Step3Categories() {
                   : 'bg-[var(--ca-dark)] border-[var(--ca-gray-dark)] hover:border-[var(--ca-gray)]'
               }`}
             >
-              <div className="flex items-start justify-between">
-                <span className="text-sm font-medium">{category.name}</span>
-                <div className="flex items-center gap-1">
-                  {category.isCustom && (
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-sm font-medium truncate" title={category.name}>
+                  {category.name.length > 24 ? `${category.name.slice(0, 24)}...` : category.name}
+                </span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {category.isCustom && !isSelected && (
                     <button
                       onClick={e => {
                         e.stopPropagation();
-                        removeCustomCategory(wizard.niche!, wizard.strategy!, category.id);
+                        removeCustomCategory(category.id);
                       }}
                       className="p-0.5 rounded hover:bg-[var(--ca-gray-dark)]"
                     >

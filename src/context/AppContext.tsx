@@ -54,10 +54,10 @@ interface AppContextType {
   favoriteClaims: string[];
   favoriteHooks: string[];
 
-  // Custom Categories
-  customCategories: Record<string, SourceCategory[]>;
-  addCustomCategory: (niche: Niche, strategy: SourceStrategy, category: SourceCategory) => void;
-  removeCustomCategory: (niche: Niche, strategy: SourceStrategy, categoryId: string) => void;
+  // Custom Categories (global, user-wide)
+  customCategories: SourceCategory[];
+  addCustomCategory: (category: SourceCategory) => void;
+  removeCustomCategory: (categoryId: string) => void;
 
   // UI State
   sidebarOpen: boolean;
@@ -99,7 +99,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [favoriteClaims, setFavoriteClaims] = useLocalStorage<string[]>('angle-finder-favorite-claims', []);
   const [favoriteHooks, setFavoriteHooks] = useLocalStorage<string[]>('angle-finder-favorite-hooks', []);
-  const [customCategories, setCustomCategories] = useLocalStorage<Record<string, SourceCategory[]>>('angle-finder-custom-categories', {});
+  const [customCategories, setCustomCategories] = useLocalStorage<SourceCategory[]>('angle-finder-custom-categories', []);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [resultsView, setResultsView] = useState<'claims' | 'hooks' | 'favorites'>('hooks');
   const [filterAngleType, setFilterAngleType] = useState<string | null>(null);
@@ -327,21 +327,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   }, [setFavoriteHooks]);
 
-  // Custom categories
-  const addCustomCategory = useCallback((niche: Niche, strategy: SourceStrategy, category: SourceCategory) => {
-    const key = `${niche}-${strategy}`;
-    setCustomCategories(prev => ({
-      ...prev,
-      [key]: [...(prev[key] || []), { ...category, isCustom: true }],
-    }));
+  // Custom categories (global, user-wide)
+  const addCustomCategory = useCallback((category: SourceCategory) => {
+    setCustomCategories(prev => [...prev, { ...category, isCustom: true }]);
   }, [setCustomCategories]);
 
-  const removeCustomCategory = useCallback((niche: Niche, strategy: SourceStrategy, categoryId: string) => {
-    const key = `${niche}-${strategy}`;
-    setCustomCategories(prev => ({
-      ...prev,
-      [key]: (prev[key] || []).filter(c => c.id !== categoryId),
-    }));
+  const removeCustomCategory = useCallback((categoryId: string) => {
+    setCustomCategories(prev => prev.filter(c => c.id !== categoryId));
   }, [setCustomCategories]);
 
   // Saved Product URLs

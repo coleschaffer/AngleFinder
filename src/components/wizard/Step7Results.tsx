@@ -104,9 +104,7 @@ export function Step7Results() {
   const getCategoryNames = () => {
     if (!wizard.niche || !wizard.strategy) return [];
     const builtInCategories = CATEGORIES[wizard.niche]?.[wizard.strategy] || [];
-    const customKey = `${wizard.niche}-${wizard.strategy}`;
-    const userCustomCategories = customCategories[customKey] || [];
-    const allCategories = [...builtInCategories, ...userCustomCategories];
+    const allCategories = [...builtInCategories, ...customCategories];
     return wizard.selectedCategories
       .map(id => allCategories.find(c => c.id === id)?.name || id)
       .filter(Boolean);
