@@ -202,7 +202,7 @@ export function Sidebar() {
                               {totalFavorites}
                             </span>
                           </div>
-                          <p className="text-[10px] text-[var(--ca-gray)] mt-1.5">
+                          <p className="text-[10px] text-[var(--ca-gray-light)] mt-1.5">
                             {format(new Date(session.date), 'M/d/yyyy - h:mm a')}
                           </p>
                         </div>
