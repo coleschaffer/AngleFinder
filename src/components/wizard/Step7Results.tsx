@@ -358,43 +358,43 @@ export function Step7Results() {
         </button>
 
         {showInputsSummary && (
-          <div className="mt-4 pt-4 border-t border-[var(--ca-gray-dark)]">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 pt-4 border-t border-[var(--ca-gray-dark)] overflow-hidden">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {/* Product Description */}
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2 min-w-0">
                 <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Product</p>
-                <p className="text-sm">{wizard.productDescription || 'No product description'}</p>
+                <p className="text-sm break-words">{wizard.productDescription || 'No product description'}</p>
               </div>
 
               {/* Strategy */}
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Strategy</p>
                 <div className="flex items-center gap-2">
                   {wizard.strategy === 'translocate' ? (
-                    <Shuffle className="w-4 h-4 text-[var(--ca-gold)]" />
+                    <Shuffle className="w-4 h-4 text-[var(--ca-gold)] flex-shrink-0" />
                   ) : (
-                    <Target className="w-4 h-4 text-[var(--ca-gold)]" />
+                    <Target className="w-4 h-4 text-[var(--ca-gold)] flex-shrink-0" />
                   )}
                   <span className="text-sm capitalize">{wizard.strategy}</span>
                 </div>
               </div>
 
               {/* Niche */}
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Niche</p>
-                <p className="text-sm">{getNicheName()}</p>
+                <p className="text-sm truncate">{getNicheName()}</p>
               </div>
 
               {/* Source Types */}
-              <div>
+              <div className="min-w-0 sm:col-span-2">
                 <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Source Types</p>
                 <div className="flex flex-wrap gap-1.5">
                   {wizard.selectedSourceTypes.map(type => {
                     const Icon = sourceTypeIcons[type];
                     return (
                       <span key={type} className="tag text-xs flex items-center gap-1">
-                        <Icon className="w-3 h-3" />
-                        {sourceTypeLabels[type]}
+                        <Icon className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{sourceTypeLabels[type]}</span>
                       </span>
                     );
                   })}
@@ -402,7 +402,7 @@ export function Step7Results() {
               </div>
 
               {/* Sources Analyzed */}
-              <div>
+              <div className="min-w-0 sm:col-span-2">
                 <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">
                   Sources Analyzed ({analyzedSources.length})
                 </p>
@@ -411,7 +411,7 @@ export function Step7Results() {
                     analyzedSources.slice(0, 5).map(source => {
                       const Icon = sourceTypeIcons[source.type];
                       return (
-                        <div key={source.id} className="flex items-center gap-1.5 text-xs text-[var(--ca-gray-light)]">
+                        <div key={source.id} className="flex items-center gap-1.5 text-xs text-[var(--ca-gray-light)] min-w-0">
                           <Icon className="w-3 h-3 flex-shrink-0" />
                           <span className="truncate">{source.title}</span>
                         </div>
@@ -431,7 +431,7 @@ export function Step7Results() {
               </div>
 
               {/* Categories */}
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2 min-w-0">
                 <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Categories</p>
                 <div className="flex flex-wrap gap-1.5">
                   {getCategoryNames().map((name, i) => (
@@ -445,51 +445,52 @@ export function Step7Results() {
       </div>
 
       {/* Tab Navigation with Export */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-[var(--ca-gray-dark)] pb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-4 mb-6 border-b border-[var(--ca-gray-dark)] pb-4">
+        {/* 2x2 grid on mobile, row on sm+ */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2">
           <button
             onClick={() => setResultsView('hooks')}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+            className={`px-3 py-2.5 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center sm:justify-start gap-2 transition-colors text-sm ${
               resultsView === 'hooks'
                 ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-                : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
+                : 'bg-[var(--ca-gray-dark)]/50 text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
             }`}
           >
             <Zap className="w-4 h-4" />
-            Hooks ({allHooks.length})
+            <span>Hooks ({allHooks.length})</span>
           </button>
           <button
             onClick={() => setResultsView('claims')}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+            className={`px-3 py-2.5 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center sm:justify-start gap-2 transition-colors text-sm ${
               resultsView === 'claims'
                 ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-                : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
+                : 'bg-[var(--ca-gray-dark)]/50 text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
             }`}
           >
             <Lightbulb className="w-4 h-4" />
-            Claims ({allClaims.length})
+            <span>Claims ({allClaims.length})</span>
           </button>
           <button
             onClick={() => setResultsView('generated')}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+            className={`px-3 py-2.5 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center sm:justify-start gap-2 transition-colors text-sm ${
               resultsView === 'generated'
                 ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-                : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
+                : 'bg-[var(--ca-gray-dark)]/50 text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            Generated ({currentSessionGeneratedHooks.length})
+            <span>Generated ({currentSessionGeneratedHooks.length})</span>
           </button>
           <button
             onClick={() => setResultsView('favorites')}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+            className={`px-3 py-2.5 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center sm:justify-start gap-2 transition-colors text-sm ${
               resultsView === 'favorites'
                 ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-                : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
+                : 'bg-[var(--ca-gray-dark)]/50 text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
             }`}
           >
             <Star className="w-4 h-4" />
-            Favorites ({favoriteClaimItems.length + favoriteHookItems.length + favoriteGeneratedItems.length})
+            <span>Favorites ({favoriteClaimItems.length + favoriteHookItems.length + favoriteGeneratedItems.length})</span>
           </button>
         </div>
         <button

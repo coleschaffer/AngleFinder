@@ -19,7 +19,7 @@ import {
   Menu,
 } from 'lucide-react';
 import { NICHES } from '@/data/niches';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface FeedbackItem {
   id: string;
@@ -47,16 +47,24 @@ export function Sidebar() {
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const initialMobileCheck = useRef(false);
 
-  // Detect mobile viewport
+  // Detect mobile viewport and close sidebar on mobile initial load
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+
+      // Close sidebar on first mobile detection (initial page load)
+      if (!initialMobileCheck.current && mobile) {
+        setSidebarOpen(false);
+      }
+      initialMobileCheck.current = true;
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [setSidebarOpen]);
 
   // Close sidebar on mobile when clicking a session
   const handleLoadSession = (sessionId: string) => {
