@@ -545,9 +545,62 @@ Guidelines:
       return true;
     });
 
+    // Calculate source type counts for scarcity scoring
+    const typeCounts: Record<string, number> = {};
+    for (const source of allSources) {
+      typeCounts[source.type] = (typeCounts[source.type] || 0) + 1;
+    }
+    const totalSources = allSources.length;
+    const numSelectedTypes = sourceTypes.length;
+
+    // Score and sort sources for diversity
+    // Higher score = better ranking
+    const scoredSources = allSources.map(source => {
+      let score = 0;
+
+      // Base relevance signals
+      if (source.views) {
+        // Normalize views on log scale (YouTube/Reddit can have huge numbers)
+        score += Math.min(Math.log10(source.views + 1) * 2, 10);
+      }
+      if (source.engagement) {
+        score += Math.min(Math.log10(source.engagement + 1) * 1.5, 5);
+      }
+
+      // Scarcity boost: sources from underrepresented types get a boost
+      // If a type has fewer results than the "fair share", boost it
+      const typeCount = typeCounts[source.type] || 1;
+      const fairShare = totalSources / numSelectedTypes;
+      if (typeCount < fairShare) {
+        // The rarer the type, the bigger the boost (up to 15 points)
+        const scarcityRatio = fairShare / typeCount;
+        score += Math.min(scarcityRatio * 5, 15);
+      }
+
+      // Small boost for sources with abstracts/snippets (more content to analyze)
+      if (source.abstract || source.snippet) {
+        score += 2;
+      }
+
+      return { source, score };
+    });
+
+    // Sort by score descending
+    scoredSources.sort((a, b) => b.score - a.score);
+
+    // Extract sorted sources
+    const sortedSources = scoredSources.map(s => s.source);
+
+    // Log diversity stats
+    const finalTypeCounts: Record<string, number> = {};
+    for (const source of sortedSources.slice(0, 20)) {
+      finalTypeCounts[source.type] = (finalTypeCounts[source.type] || 0) + 1;
+    }
+    console.log('Source type distribution in first 20:', finalTypeCounts);
+
     // Paginate - 20 per page
     const startIndex = (page - 1) * 20;
-    const paginatedSources = allSources.slice(startIndex, startIndex + 20);
+    const paginatedSources = sortedSources.slice(startIndex, startIndex + 20);
 
     return NextResponse.json({ sources: paginatedSources });
   } catch (error) {
