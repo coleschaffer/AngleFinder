@@ -58,6 +58,18 @@ export function Sidebar() {
     return () => window.removeEventListener('resize', checkMobile);
   }, [setSidebarOpen]);
 
+  // Prevent body scroll when feedback modal is open
+  useEffect(() => {
+    if (showFeedback) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showFeedback]);
+
   // Close sidebar on mobile when clicking a session
   const handleLoadSession = (sessionId: string) => {
     loadSession(sessionId);
@@ -113,11 +125,11 @@ export function Sidebar() {
 
     return (
       <div
-        className="fixed inset-0 feedback-backdrop flex items-center justify-center z-[100] p-4"
+        className="fixed inset-0 feedback-backdrop flex items-start sm:items-center justify-center z-[100] p-4 pt-16 sm:pt-4 overflow-y-auto"
         onClick={() => setShowFeedback(false)}
       >
         <div
-          className="feedback-modal w-full max-w-md sm:max-w-lg bg-gradient-to-b from-[var(--ca-dark)] to-[var(--ca-black)] border border-[var(--ca-gray-dark)] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden"
+          className="feedback-modal w-full max-w-md sm:max-w-lg bg-gradient-to-b from-[var(--ca-dark)] to-[var(--ca-black)] border border-[var(--ca-gray-dark)] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden mb-[50vh] sm:mb-0 sm:my-0 flex-shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
           {feedbackSent ? (
