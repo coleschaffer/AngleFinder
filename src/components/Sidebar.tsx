@@ -212,9 +212,9 @@ export function Sidebar() {
     </div>
   );
 
-  // Sidebar content (shared between mobile and desktop)
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full animate-fade-in">
+  // Sidebar content (shared between mobile and desktop) - inlined to prevent remounting
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-[var(--ca-gray-dark)] flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -392,7 +392,7 @@ export function Sidebar() {
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <SidebarContent />
+          {sidebarContent}
         </div>
 
         {/* Feedback Modal - rendered outside drawer */}
@@ -423,7 +423,7 @@ export function Sidebar() {
         )}
 
         {/* Expanded State */}
-        {sidebarOpen && <SidebarContent />}
+        {sidebarOpen && sidebarContent}
       </div>
 
       {/* Feedback Modal - rendered outside sidebar */}
