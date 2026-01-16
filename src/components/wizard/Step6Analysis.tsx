@@ -49,8 +49,8 @@ export function Step6Analysis() {
         }))
       );
 
-      // Analyze sources in parallel batches of 3
-      const batchSize = 3;
+      // Analyze sources in parallel batches of 5
+      const batchSize = 5;
       for (let i = 0; i < sources.length; i += batchSize) {
         const batch = sources.slice(i, i + batchSize);
         const batchIds = new Set(batch.map(s => s.id));

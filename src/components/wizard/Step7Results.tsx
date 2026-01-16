@@ -191,9 +191,20 @@ export function Step7Results() {
     return allHooks.filter(h => favoriteHooks.includes(h.id));
   }, [allHooks, favoriteHooks]);
 
+  // Get source IDs from current session to filter generated hooks
+  const currentSessionSourceIds = useMemo(() => {
+    return new Set(wizard.results.map(r => r.sourceId));
+  }, [wizard.results]);
+
+  // Filter generated hooks to only show ones from current session
+  const currentSessionGeneratedHooks = useMemo(() => {
+    return generatedHooks.filter(h => currentSessionSourceIds.has(h.sourceId));
+  }, [generatedHooks, currentSessionSourceIds]);
+
   const favoriteGeneratedItems = useMemo(() => {
-    return generatedHooks.filter(h => favoriteHooks.includes(h.id));
-  }, [generatedHooks, favoriteHooks]);
+    // Only show favorited generated hooks that belong to current session
+    return currentSessionGeneratedHooks.filter(h => favoriteHooks.includes(h.id));
+  }, [currentSessionGeneratedHooks, favoriteHooks]);
 
   // Export functions
   const exportToMarkdown = (type: 'claims' | 'hooks' | 'all' | 'favorites' | 'generated') => {
@@ -467,7 +478,7 @@ export function Step7Results() {
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            Generated ({generatedHooks.length})
+            Generated ({currentSessionGeneratedHooks.length})
           </button>
           <button
             onClick={() => setResultsView('favorites')}
@@ -614,7 +625,7 @@ export function Step7Results() {
 
         {resultsView === 'generated' && (
           <>
-            {generatedHooks.length === 0 ? (
+            {currentSessionGeneratedHooks.length === 0 ? (
               <div className="text-center py-12">
                 <Sparkles className="w-12 h-12 text-[var(--ca-gray-dark)] mx-auto mb-4" />
                 <p className="text-[var(--ca-gray-light)] mb-2">No generated hooks yet</p>
@@ -624,7 +635,7 @@ export function Step7Results() {
               </div>
             ) : (
               <div className="space-y-4">
-                {generatedHooks.map(hook => (
+                {currentSessionGeneratedHooks.map(hook => (
                   <HookCard
                     key={hook.id}
                     hook={hook}
