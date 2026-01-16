@@ -307,7 +307,7 @@ export function Step7Results() {
           {currentSession && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="btn btn-ghost text-red-400 hover:bg-red-500/10"
+              className="btn btn-ghost text-[var(--ca-gray-light)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
               title="Delete this session"
             >
               <Trash2 className="w-4 h-4" />

@@ -221,9 +221,9 @@ export function Sidebar() {
           <div className="p-4 border-t border-[var(--ca-gray-dark)]">
             <button
               onClick={() => setShowFeedback(true)}
-              className="w-full btn btn-ghost text-xs py-2"
+              className="w-full btn btn-ghost text-sm py-2.5"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquare className="w-4 h-4" />
               Send Feedback
             </button>
           </div>
