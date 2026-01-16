@@ -17,8 +17,18 @@ import {
   AlertCircle,
   Loader2,
   ChevronDown,
+  ChevronUp,
+  Clock,
+  X,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+
+const sourceTypeLabels: Record<SourceType, string> = {
+  youtube: 'YouTube',
+  podcast: 'Podcasts',
+  reddit: 'Reddit',
+  pubmed: 'PubMed',
+};
 
 const sourceIcons: Record<SourceType, typeof Youtube> = {
   youtube: Youtube,
@@ -42,6 +52,8 @@ export function Step5Discovery() {
   const [hasSearched, setHasSearched] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
+  const [filterSourceType, setFilterSourceType] = useState<SourceType | 'all'>('all');
+  const [showSelectedSources, setShowSelectedSources] = useState(false);
   const hasAutoSearched = useRef(false);
 
   const getCategoryNames = () => {
@@ -133,8 +145,24 @@ export function Step5Discovery() {
     return views.toString();
   };
 
-  const availableSources = wizard.discoveredSources.filter(s => !s.failed);
+  const allAvailableSources = wizard.discoveredSources.filter(s => !s.failed);
   const failedSources = wizard.discoveredSources.filter(s => s.failed);
+
+  // Filter sources by selected type
+  const availableSources = filterSourceType === 'all'
+    ? allAvailableSources
+    : allAvailableSources.filter(s => s.type === filterSourceType);
+
+  // Get counts per source type
+  const sourceTypeCounts = wizard.selectedSourceTypes.reduce((acc, type) => {
+    acc[type] = allAvailableSources.filter(s => s.type === type).length;
+    return acc;
+  }, {} as Record<SourceType, number>);
+
+  // Get selected sources for the summary
+  const selectedSourcesList = wizard.discoveredSources.filter(s =>
+    wizard.selectedSources.includes(s.id)
+  );
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
@@ -145,36 +173,124 @@ export function Step5Discovery() {
         </p>
       </div>
 
-      {/* Search Button */}
-      <div className="flex justify-center mb-8">
-        <button
-          onClick={handleSearch}
-          disabled={isSearching}
-          className="btn btn-primary px-8 py-3 text-lg"
-        >
-          {isSearching ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Searching for relevant content...
-            </>
-          ) : (
-            <>
-              <Search className="w-5 h-5" />
-              Search Sources
-            </>
-          )}
-        </button>
-      </div>
+      {/* Skeleton Loading */}
+      {isSearching && (
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-[var(--ca-gold)]" />
+              <span className="text-sm text-[var(--ca-gray-light)]">
+                Searching for relevant content...
+              </span>
+            </div>
+          </div>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="card animate-pulse">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-[var(--ca-gray-dark)] flex-shrink-0 shimmer" />
+                <div className="flex-1">
+                  <div className="h-4 bg-[var(--ca-gray-dark)] rounded w-3/4 mb-3 shimmer" />
+                  <div className="flex gap-2">
+                    <div className="h-5 bg-[var(--ca-gray-dark)] rounded-full w-20 shimmer" />
+                    <div className="h-5 bg-[var(--ca-gray-dark)] rounded w-16 shimmer" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Results */}
       {hasSearched && !isSearching && (
         <>
+          {/* Selected Sources Summary */}
+          {selectedSourcesList.length > 0 && (
+            <div className="card mb-6">
+              <button
+                onClick={() => setShowSelectedSources(!showSelectedSources)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[var(--ca-gold)]" />
+                  <span className="font-medium text-sm">Selected Sources ({selectedSourcesList.length})</span>
+                </div>
+                {showSelectedSources ? (
+                  <ChevronUp className="w-4 h-4 text-[var(--ca-gray-light)]" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-[var(--ca-gray-light)]" />
+                )}
+              </button>
+              {showSelectedSources && (
+                <div className="mt-4 pt-4 border-t border-[var(--ca-gray-dark)] space-y-2 max-h-48 overflow-y-auto">
+                  {selectedSourcesList.map(source => {
+                    const Icon = sourceIcons[source.type];
+                    return (
+                      <div
+                        key={source.id}
+                        className="flex items-center justify-between gap-2 text-sm py-1"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Icon className="w-3.5 h-3.5 text-[var(--ca-gray-light)] flex-shrink-0" />
+                          <span className="truncate">{source.title}</span>
+                        </div>
+                        <button
+                          onClick={() => toggleSourceSelection(source.id)}
+                          className="p-1 rounded hover:bg-[var(--ca-gray-dark)] text-[var(--ca-gray-light)] hover:text-red-400 flex-shrink-0"
+                          title="Remove"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Source Type Filter */}
+          {allAvailableSources.length > 0 && wizard.selectedSourceTypes.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <span className="text-xs text-[var(--ca-gray-light)] mr-1">Filter:</span>
+              <button
+                onClick={() => setFilterSourceType('all')}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  filterSourceType === 'all'
+                    ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
+                    : 'bg-[var(--ca-gray-dark)] text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray)]'
+                }`}
+              >
+                All ({allAvailableSources.length})
+              </button>
+              {wizard.selectedSourceTypes.map(type => {
+                const Icon = sourceIcons[type];
+                const count = sourceTypeCounts[type] || 0;
+                if (count === 0) return null;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setFilterSourceType(type)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                      filterSourceType === type
+                        ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
+                        : 'bg-[var(--ca-gray-dark)] text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray)]'
+                    }`}
+                  >
+                    <Icon className="w-3 h-3" />
+                    {sourceTypeLabels[type]} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Selection Controls */}
           {availableSources.length > 0 && (
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-[var(--ca-gray-light)]">
-                  {wizard.selectedSources.length} of {availableSources.length} selected
+                  {wizard.selectedSources.length} of {allAvailableSources.length} selected
                 </span>
                 <button
                   onClick={selectAllSources}
@@ -303,6 +419,14 @@ export function Step5Discovery() {
             </div>
           )}
         </>
+      )}
+
+      {/* Analysis Note */}
+      {wizard.selectedSources.length > 3 && (
+        <div className="flex items-center gap-2 text-xs text-[var(--ca-gray-light)] mb-4 justify-center">
+          <Clock className="w-3.5 h-3.5" />
+          <span>Selecting more sources may result in longer analysis time</span>
+        </div>
       )}
 
       {/* Navigation */}

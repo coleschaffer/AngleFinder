@@ -73,6 +73,7 @@ export function Step7Results() {
   const [hasSaved, setHasSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showInputsSummary, setShowInputsSummary] = useState(true);
+  const [sortClaimsBy, setSortClaimsBy] = useState<'surprise' | 'source'>('surprise');
 
   // Auto-save session on first load of results (only for new sessions)
   useEffect(() => {
@@ -137,6 +138,16 @@ export function Step7Results() {
     );
   }, [wizard.results]);
 
+  // Sort claims
+  const sortedClaims = useMemo(() => {
+    const claims = [...allClaims];
+    if (sortClaimsBy === 'surprise') {
+      return claims.sort((a, b) => b.surpriseScore - a.surpriseScore);
+    }
+    // Sort by source - keep original order (grouped by source)
+    return claims;
+  }, [allClaims, sortClaimsBy]);
+
   // Filter hooks by angle type
   const filteredHooks = useMemo(() => {
     let hooks = allHooks;
@@ -147,10 +158,14 @@ export function Step7Results() {
   }, [allHooks, filterAngleType]);
 
   // Sort hooks
+  const bridgeDistanceOrder = { 'Aggressive': 0, 'Moderate': 1, 'Conservative': 2 };
   const sortedHooks = useMemo(() => {
     const hooks = [...filteredHooks];
     if (sortResultsBy === 'virality') {
       return hooks.sort((a, b) => b.viralityScore.total - a.viralityScore.total);
+    }
+    if (sortResultsBy === 'bridge') {
+      return hooks.sort((a, b) => bridgeDistanceOrder[a.bridgeDistance] - bridgeDistanceOrder[b.bridgeDistance]);
     }
     // Sort by source - group by sourceId
     return hooks;
@@ -208,7 +223,7 @@ export function Step7Results() {
     };
 
     if (type === 'claims') {
-      content += exportClaims(allClaims);
+      content += exportClaims(sortedClaims);
     } else if (type === 'hooks') {
       content += exportHooks(sortedHooks);
     } else if (type === 'favorites') {
@@ -227,7 +242,10 @@ export function Step7Results() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `angle-finder-${type}-${Date.now()}.md`;
+    // Create descriptive filename with niche and date
+    const nicheName = (getNicheName() || 'research').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `angle-finder-${nicheName}-${type}-${dateStr}.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -275,12 +293,7 @@ export function Step7Results() {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Analysis Results</h2>
-          <p className="text-[var(--ca-gray-light)] text-sm">
-            {allClaims.length} claims, {allHooks.length} hooks from {wizard.results.length} sources
-          </p>
-        </div>
+        <h2 className="text-2xl font-bold">Analysis Results</h2>
         <div className="flex gap-2">
           {currentSession && (
             <button
@@ -291,9 +304,9 @@ export function Step7Results() {
               <Trash2 className="w-4 h-4" />
             </button>
           )}
-          <button onClick={resetWizard} className="btn btn-secondary">
-            <RefreshCw className="w-4 h-4" />
-            New Research
+          <button onClick={() => exportToMarkdown('all')} className="btn btn-secondary">
+            <Download className="w-4 h-4" />
+            Export All
           </button>
         </div>
       </div>
@@ -343,16 +356,6 @@ export function Step7Results() {
                 <p className="text-sm">{getNicheName()}</p>
               </div>
 
-              {/* Categories */}
-              <div className="sm:col-span-2">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Categories</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {getCategoryNames().map((name, i) => (
-                    <span key={i} className="tag text-xs">{name}</span>
-                  ))}
-                </div>
-              </div>
-
               {/* Source Types */}
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Source Types</p>
@@ -397,137 +400,151 @@ export function Step7Results() {
                   )}
                 </div>
               </div>
+
+              {/* Categories */}
+              <div className="sm:col-span-2">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--ca-gray)] mb-1">Categories</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {getCategoryNames().map((name, i) => (
+                    <span key={i} className="tag text-xs">{name}</span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-2 mb-6 border-b border-[var(--ca-gray-dark)] pb-4">
+      {/* Tab Navigation with Export */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-[var(--ca-gray-dark)] pb-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setResultsView('hooks')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+              resultsView === 'hooks'
+                ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
+                : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
+            }`}
+          >
+            <Zap className="w-4 h-4" />
+            Hooks ({allHooks.length})
+          </button>
+          <button
+            onClick={() => setResultsView('claims')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+              resultsView === 'claims'
+                ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
+                : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
+            }`}
+          >
+            <Lightbulb className="w-4 h-4" />
+            Claims ({allClaims.length})
+          </button>
+          <button
+            onClick={() => setResultsView('favorites')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+              resultsView === 'favorites'
+                ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
+                : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
+            }`}
+          >
+            <Star className="w-4 h-4" />
+            Favorites ({favoriteClaimItems.length + favoriteHookItems.length})
+          </button>
+        </div>
         <button
-          onClick={() => setResultsView('hooks')}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-            resultsView === 'hooks'
-              ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-              : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
-          }`}
+          onClick={() =>
+            exportToMarkdown(
+              resultsView === 'favorites' ? 'favorites' : resultsView === 'claims' ? 'claims' : 'hooks'
+            )
+          }
+          className="btn btn-secondary text-sm"
         >
-          <Zap className="w-4 h-4" />
-          Hooks ({allHooks.length})
-        </button>
-        <button
-          onClick={() => setResultsView('claims')}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-            resultsView === 'claims'
-              ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-              : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
-          }`}
-        >
-          <Lightbulb className="w-4 h-4" />
-          Claims ({allClaims.length})
-        </button>
-        <button
-          onClick={() => setResultsView('favorites')}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-            resultsView === 'favorites'
-              ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
-              : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
-          }`}
-        >
-          <Star className="w-4 h-4" />
-          Favorites ({favoriteClaimItems.length + favoriteHookItems.length})
+          <Download className="w-4 h-4" />
+          Export {resultsView === 'favorites' ? 'Favorites' : resultsView === 'claims' ? 'Claims' : 'Hooks'}
         </button>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        {/* Filter & Sort (for hooks view) */}
-        {resultsView === 'hooks' && (
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Filter Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="btn btn-secondary text-sm"
-              >
-                <Filter className="w-4 h-4" />
-                {filterAngleType || 'All Angles'}
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              {showFilters && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1">
+      {/* Filter & Sort Controls (for hooks view) */}
+      {resultsView === 'hooks' && (
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          {/* Filter Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="btn btn-secondary text-sm"
+            >
+              <Filter className="w-4 h-4" />
+              {filterAngleType || 'All Angles'}
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {showFilters && (
+              <div className="absolute top-full left-0 mt-2 w-48 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1">
+                <button
+                  onClick={() => {
+                    setFilterAngleType(null);
+                    setShowFilters(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
+                    !filterAngleType ? 'text-[var(--ca-gold)]' : ''
+                  }`}
+                >
+                  All Angles
+                </button>
+                {ANGLE_TYPES.map(type => (
                   <button
+                    key={type}
                     onClick={() => {
-                      setFilterAngleType(null);
+                      setFilterAngleType(type);
                       setShowFilters(false);
                     }}
                     className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
-                      !filterAngleType ? 'text-[var(--ca-gold)]' : ''
+                      filterAngleType === type ? 'text-[var(--ca-gold)]' : ''
                     }`}
                   >
-                    All Angles
+                    {type}
                   </button>
-                  {ANGLE_TYPES.map(type => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        setFilterAngleType(type);
-                        setShowFilters(false);
-                      }}
-                      className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
-                        filterAngleType === type ? 'text-[var(--ca-gold)]' : ''
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Sort Toggle */}
-            <button
-              onClick={() =>
-                setSortResultsBy(sortResultsBy === 'virality' ? 'source' : 'virality')
-              }
-              className="btn btn-secondary text-sm"
-            >
-              <ArrowUpDown className="w-4 h-4" />
-              Sort: {sortResultsBy === 'virality' ? 'Virality Score' : 'By Source'}
-            </button>
+                ))}
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Export Buttons */}
-        <div className="flex gap-2">
+          {/* Sort Toggle */}
           <button
-            onClick={() =>
-              exportToMarkdown(
-                resultsView === 'favorites' ? 'favorites' : resultsView === 'claims' ? 'claims' : 'hooks'
-              )
-            }
+            onClick={() => {
+              if (sortResultsBy === 'virality') setSortResultsBy('bridge');
+              else if (sortResultsBy === 'bridge') setSortResultsBy('source');
+              else setSortResultsBy('virality');
+            }}
             className="btn btn-secondary text-sm"
           >
-            <Download className="w-4 h-4" />
-            Export {resultsView === 'favorites' ? 'Favorites' : resultsView === 'claims' ? 'Claims' : 'Hooks'}
+            <ArrowUpDown className="w-4 h-4" />
+            Sort: {sortResultsBy === 'virality' ? 'Virality Score' : sortResultsBy === 'bridge' ? 'Bridge' : 'By Source'}
           </button>
-          {resultsView !== 'favorites' && (
-            <button onClick={() => exportToMarkdown('all')} className="btn btn-secondary text-sm">
-              <Download className="w-4 h-4" />
-              Export All
-            </button>
-          )}
         </div>
-      </div>
+      )}
+
+      {/* Sort Controls (for claims view) */}
+      {resultsView === 'claims' && (
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <button
+            onClick={() => setSortClaimsBy(sortClaimsBy === 'surprise' ? 'source' : 'surprise')}
+            className="btn btn-secondary text-sm"
+          >
+            <ArrowUpDown className="w-4 h-4" />
+            Sort: {sortClaimsBy === 'surprise' ? 'Surprise Score' : 'By Source'}
+          </button>
+        </div>
+      )}
 
       {/* Results Grid */}
       <div className="space-y-4">
         {resultsView === 'claims' && (
           <>
-            {allClaims.length === 0 ? (
+            {sortedClaims.length === 0 ? (
               <p className="text-center text-[var(--ca-gray-light)] py-12">No claims found</p>
             ) : (
-              allClaims.map(claim => (
+              sortedClaims.map(claim => (
                 <ClaimCard
                   key={claim.id}
                   claim={claim}

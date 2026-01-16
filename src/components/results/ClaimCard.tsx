@@ -2,7 +2,7 @@
 
 import { Claim, SourceType } from '@/types';
 import { useApp } from '@/context/AppContext';
-import { Star, ChevronDown, ChevronUp, Copy, Check, Youtube, Radio, MessageSquare, BookOpen } from 'lucide-react';
+import { Star, ChevronDown, ChevronUp, Copy, Check, Download, Youtube, Radio, MessageSquare, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 
 interface ClaimCardProps {
@@ -34,6 +34,25 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleExport = () => {
+    let content = `# Claim Export\n\n`;
+    content += `## ${claim.claim}\n\n`;
+    content += `**Surprise Score:** ${claim.surpriseScore}/10\n\n`;
+    content += `### Exact Quote\n> "${claim.exactQuote}"\n\n`;
+    content += `### Mechanism\n${claim.mechanism}\n\n`;
+    content += `**Source:** [${sourceName}](${sourceUrl})\n`;
+
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const claimSlug = claim.claim.toLowerCase().slice(0, 30).replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    a.download = `claim-${claimSlug}-${dateStr}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const getScoreClass = (score: number) => {
     if (score >= 8) return 'score-high';
     if (score >= 5) return 'score-medium';
@@ -41,7 +60,7 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
   };
 
   return (
-    <div className="card animate-slide-up">
+    <div className="card animate-slide-up cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -52,7 +71,7 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
             {claim.surpriseScore}
           </div>
           <button
-            onClick={() => toggleClaimFavorite(claim.id)}
+            onClick={(e) => { e.stopPropagation(); toggleClaimFavorite(claim.id); }}
             className={`p-2 rounded-lg transition-colors ${
               isFavorite
                 ? 'text-[var(--ca-gold)] bg-[var(--ca-gold)]/10'
@@ -76,7 +95,6 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
             ? 'Reddit'
             : 'PubMed'}
         </span>
-        <span className="text-xs text-[var(--ca-gray-light)]">Surprise Score: {claim.surpriseScore}/10</span>
       </div>
 
       {/* Expand/Collapse Toggle */}
@@ -99,7 +117,7 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="space-y-4 pt-4 border-t border-[var(--ca-gray-dark)] animate-fade-in">
+        <div className="space-y-4 pt-4 border-t border-[var(--ca-gray-dark)] animate-fade-in" onClick={(e) => e.stopPropagation()}>
           {/* Exact Quote */}
           <div>
             <h4 className="text-xs font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-2">
@@ -133,23 +151,32 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
             </a>
           </div>
 
-          {/* Copy Button */}
-          <button
-            onClick={handleCopy}
-            className="btn btn-secondary text-sm w-full"
-          >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4" />
-                Copy Claim
-              </>
-            )}
-          </button>
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleCopy}
+              className="btn btn-secondary text-sm flex-1"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy Claim
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleExport}
+              className="btn btn-secondary text-sm flex-1"
+            >
+              <Download className="w-4 h-4" />
+              Export Claim
+            </button>
+          </div>
         </div>
       )}
     </div>

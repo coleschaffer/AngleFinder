@@ -8,6 +8,7 @@ import {
   ChevronUp,
   Copy,
   Check,
+  Download,
   Youtube,
   Radio,
   MessageSquare,
@@ -57,6 +58,35 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleExport = () => {
+    let content = `# Hook Export\n\n`;
+    content += `## ${displayHook.headline}\n\n`;
+    content += `**Virality Score:** ${displayHook.viralityScore.total}/50\n\n`;
+    content += `**Bridge Distance:** ${displayHook.bridgeDistance}\n\n`;
+    content += `**Angle Types:** ${displayHook.angleTypes.join(', ')}\n\n`;
+    content += `### Source Claim\n${displayHook.sourceClaim}\n\n`;
+    content += `### The Bridge\n${displayHook.bridge}\n\n`;
+    content += `### Big Idea Summary\n${displayHook.bigIdeaSummary}\n\n`;
+    content += `### Sample Ad Opener\n${displayHook.sampleAdOpener}\n\n`;
+    content += `### Virality Breakdown\n`;
+    content += `- Easy to Understand: ${displayHook.viralityScore.easyToUnderstand}/10\n`;
+    content += `- Emotional: ${displayHook.viralityScore.emotional}/10\n`;
+    content += `- Curiosity: ${displayHook.viralityScore.curiosityInducing}/10\n`;
+    content += `- Contrarian: ${displayHook.viralityScore.contrarian}/10\n`;
+    content += `- Provable: ${displayHook.viralityScore.provable}/10\n\n`;
+    content += `**Source:** [${sourceName}](${sourceUrl})\n`;
+
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const hookSlug = displayHook.headline.toLowerCase().slice(0, 30).replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    a.download = `hook-${hookSlug}-${dateStr}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleGenerateVariation = async () => {
     if (!variationFeedback.trim()) return;
 
@@ -93,7 +123,7 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
   const displayHook = variation || hook;
 
   return (
-    <div className="card animate-slide-up">
+    <div className="card animate-slide-up cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -107,7 +137,7 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
             {displayHook.viralityScore.total}
           </div>
           <button
-            onClick={() => toggleHookFavorite(hook.id)}
+            onClick={(e) => { e.stopPropagation(); toggleHookFavorite(hook.id); }}
             className={`p-2 rounded-lg transition-colors ${
               isFavorite
                 ? 'text-[var(--ca-gold)] bg-[var(--ca-gold)]/10'
@@ -132,7 +162,7 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
             : 'PubMed'}
         </span>
         <span className={`tag border ${bridgeDistanceColors[displayHook.bridgeDistance]}`}>
-          {displayHook.bridgeDistance}
+          Bridge: {displayHook.bridgeDistance}
         </span>
         {displayHook.angleTypes.map(type => (
           <span key={type} className="tag tag-gold">
@@ -161,7 +191,7 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="space-y-6 pt-4 border-t border-[var(--ca-gray-dark)] animate-fade-in">
+        <div className="space-y-6 pt-4 border-t border-[var(--ca-gray-dark)] animate-fade-in" onClick={(e) => e.stopPropagation()}>
           {/* Source Claim */}
           <div>
             <h4 className="text-xs font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-2">
@@ -259,6 +289,10 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
                   Copy Hook
                 </>
               )}
+            </button>
+            <button onClick={handleExport} className="btn btn-secondary flex-1">
+              <Download className="w-4 h-4" />
+              Export Hook
             </button>
             <button
               onClick={() => setShowVariationInput(!showVariationInput)}

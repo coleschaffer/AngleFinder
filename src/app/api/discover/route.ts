@@ -156,8 +156,8 @@ async function searchPubMed(query: string): Promise<Source[]> {
 
     if (ids.length === 0) return [];
 
-    // Small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 350));
+    // Delay to avoid rate limiting (NCBI recommends 3 requests/second max)
+    await new Promise(resolve => setTimeout(resolve, 400));
 
     // Get article summaries - use POST for reliability
     const summaryResponse = await fetch(
@@ -171,7 +171,34 @@ async function searchPubMed(query: string): Promise<Source[]> {
 
     if (!summaryResponse.ok) {
       console.error('PubMed summary status:', summaryResponse.status, summaryResponse.statusText);
-      // Return basic results without full metadata if summary fails
+
+      // Fallback: try efetch to get article metadata via XML
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const efetchResponse = await fetch(
+        `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.join(',')}&rettype=abstract&retmode=xml&${toolParams}`
+      );
+
+      if (efetchResponse.ok) {
+        const xmlText = await efetchResponse.text();
+        // Parse basic info from XML
+        return ids.map((id: string) => {
+          // Try to extract title from XML
+          const articleRegex = new RegExp(`<PubmedArticle[^>]*>(?:(?!</PubmedArticle>)[\\s\\S])*?<PMID[^>]*>${id}</PMID>(?:(?!</PubmedArticle>)[\\s\\S])*?<ArticleTitle>([^<]+)</ArticleTitle>(?:(?!</PubmedArticle>)[\\s\\S])*?(?:<LastName>([^<]+)</LastName>)?`, 'i');
+          const match = xmlText.match(articleRegex);
+          const title = match?.[1]?.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&') || `PubMed Article ${id}`;
+          const author = match?.[2] || 'Unknown';
+
+          return {
+            id: `pubmed-${id}`,
+            type: 'pubmed' as SourceType,
+            title,
+            url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+            author,
+          };
+        });
+      }
+
+      // Ultimate fallback - return IDs only
       return ids.map((id: string) => ({
         id: `pubmed-${id}`,
         type: 'pubmed' as SourceType,

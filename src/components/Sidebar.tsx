@@ -10,8 +10,23 @@ import {
   ChevronRight,
   Zap,
   Lightbulb,
+  Star,
+  Shuffle,
+  Target,
+  MessageSquare,
+  Send,
+  X,
 } from 'lucide-react';
 import { NICHES } from '@/data/niches';
+import { useState } from 'react';
+
+interface FeedbackItem {
+  id: string;
+  email: string;
+  message: string;
+  date: string;
+  userAgent: string;
+}
 
 export function Sidebar() {
   const {
@@ -21,11 +36,42 @@ export function Sidebar() {
     currentSession,
     loadSession,
     resetWizard,
+    favoriteClaims,
+    favoriteHooks,
   } = useApp();
+
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackEmail, setFeedbackEmail] = useState('');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   const getNicheName = (nicheId: string) => {
     const niche = NICHES.find(n => n.id === nicheId);
     return niche?.name || nicheId;
+  };
+
+  const handleSubmitFeedback = () => {
+    if (!feedbackText.trim() || !feedbackEmail.trim()) return;
+
+    const feedback: FeedbackItem = {
+      id: crypto.randomUUID(),
+      email: feedbackEmail.trim(),
+      message: feedbackText.trim(),
+      date: new Date().toISOString(),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+    };
+
+    // Store in localStorage
+    const existingFeedback = JSON.parse(localStorage.getItem('angle-finder-feedback') || '[]');
+    localStorage.setItem('angle-finder-feedback', JSON.stringify([feedback, ...existingFeedback]));
+
+    setFeedbackEmail('');
+    setFeedbackText('');
+    setFeedbackSent(true);
+    setTimeout(() => {
+      setShowFeedback(false);
+      setFeedbackSent(false);
+    }, 2000);
   };
 
   return (
@@ -100,6 +146,10 @@ export function Sidebar() {
                 {sessions.map(session => {
                   const totalHooks = session.results.reduce((acc, r) => acc + r.hooks.length, 0);
                   const totalClaims = session.results.reduce((acc, r) => acc + r.claims.length, 0);
+                  // Count favorites by checking against the actual favorites arrays
+                  const totalFavorites = session.results.reduce((acc, r) =>
+                    acc + r.hooks.filter(h => favoriteHooks.includes(h.id)).length + r.claims.filter(c => favoriteClaims.includes(c.id)).length, 0
+                  );
                   const isActive = currentSession?.id === session.id;
 
                   return (
@@ -121,25 +171,35 @@ export function Sidebar() {
                             {session.productDescription?.slice(0, 40) || 'No product description'}
                             {session.productDescription?.length > 40 ? '...' : ''}
                           </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className={`tag text-[10px] py-0.5 px-1.5 ${
-                              session.strategy === 'translocate' ? 'tag-gold' : ''
-                            }`}>
-                              {session.strategy === 'translocate' ? 'Translocate' : 'Direct'}
+                          <div className="flex items-center gap-1 mt-1.5 text-[10px] text-[var(--ca-gray-light)]">
+                            {session.strategy === 'translocate' ? (
+                              <>
+                                <Shuffle className="w-3 h-3" />
+                                <span>Translocate</span>
+                              </>
+                            ) : (
+                              <>
+                                <Target className="w-3 h-3" />
+                                <span>Direct</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[var(--ca-gray-light)]">
+                            <span className="flex items-center gap-0.5">
+                              <Zap className="w-3 h-3" />
+                              {totalHooks}
                             </span>
-                            <div className="flex items-center gap-1.5 text-[10px] text-[var(--ca-gray-light)]">
-                              <span className="flex items-center gap-0.5">
-                                <Zap className="w-3 h-3" />
-                                {totalHooks}
-                              </span>
-                              <span className="flex items-center gap-0.5">
-                                <Lightbulb className="w-3 h-3" />
-                                {totalClaims}
-                              </span>
-                            </div>
+                            <span className="flex items-center gap-0.5">
+                              <Lightbulb className="w-3 h-3" />
+                              {totalClaims}
+                            </span>
+                            <span className={`flex items-center gap-0.5 ${totalFavorites > 0 ? 'text-[var(--ca-gold)]' : ''}`}>
+                              <Star className={`w-3 h-3 ${totalFavorites > 0 ? 'fill-current' : ''}`} />
+                              {totalFavorites}
+                            </span>
                           </div>
                           <p className="text-[10px] text-[var(--ca-gray)] mt-1.5">
-                            {format(new Date(session.date), 'MMM d, yyyy · h:mm a')}
+                            {format(new Date(session.date), 'M/d/yyyy - h:mm a')}
                           </p>
                         </div>
                         {isActive && (
@@ -155,18 +215,107 @@ export function Sidebar() {
 
           {/* Footer */}
           <div className="p-4 border-t border-[var(--ca-gray-dark)]">
-            <p className="text-xs text-[var(--ca-gray-light)] text-center">
-              Powered by{' '}
-              <a
-                href="https://www.copyaccelerator.com/info"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[var(--ca-gold)] hover:underline"
-              >
-                CA Pro
-              </a>
-            </p>
+            <button
+              onClick={() => setShowFeedback(true)}
+              className="w-full btn btn-ghost text-xs py-2"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Send Feedback
+            </button>
           </div>
+
+          {/* Feedback Modal */}
+          {showFeedback && (
+            <div className="fixed inset-0 feedback-backdrop flex items-center justify-center z-50 p-4">
+              <div
+                className="feedback-modal w-full max-w-lg bg-gradient-to-b from-[var(--ca-dark)] to-[var(--ca-black)] border border-[var(--ca-gray-dark)] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {feedbackSent ? (
+                  /* Success State */
+                  <div className="py-12 px-8">
+                    <div className="flex flex-col items-center">
+                      <div className="success-circle w-16 h-16 rounded-full bg-[var(--ca-gold)] flex items-center justify-center">
+                        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
+                          <path
+                            className="success-check"
+                            d="M5 13l4 4L19 7"
+                            stroke="var(--ca-black)"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
+
+                      <h3 className="text-xl font-bold mt-4 mb-2">
+                        Thank You!
+                      </h3>
+                      <p className="text-[var(--ca-gray-light)] text-center text-sm">
+                        Your feedback has been submitted.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Form State */
+                  <>
+                    {/* Header */}
+                    <div className="relative px-6 pt-6 pb-4">
+                      <div className="flex items-start justify-between">
+                        <h3 className="text-xl font-semibold">Send Feedback</h3>
+                        <button
+                          onClick={() => setShowFeedback(false)}
+                          className="p-2 rounded-lg hover:bg-[var(--ca-gray-dark)] transition-colors group"
+                        >
+                          <X className="w-5 h-5 text-[var(--ca-gray)] group-hover:text-white transition-colors" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="px-6 pb-6 space-y-4">
+                      <input
+                        type="email"
+                        value={feedbackEmail}
+                        onChange={(e) => setFeedbackEmail(e.target.value)}
+                        placeholder="Your email"
+                        className="input"
+                        autoFocus
+                      />
+                      <div className="relative">
+                        <textarea
+                          value={feedbackText}
+                          onChange={(e) => setFeedbackText(e.target.value)}
+                          placeholder="Share your thoughts, suggestions, or report issues..."
+                          className="feedback-textarea w-full min-h-[120px] p-4 bg-[var(--ca-gray-dark)] border border-[var(--ca-gray)] rounded-lg text-white placeholder:text-[var(--ca-gray-light)] resize-none transition-all duration-200 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Footer */}
+                      <div className="flex justify-end pt-2">
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => setShowFeedback(false)}
+                            className="btn btn-ghost"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSubmitFeedback}
+                            disabled={!feedbackText.trim() || !feedbackEmail.trim()}
+                            className="btn btn-primary"
+                          >
+                            <Send className="w-4 h-4" />
+                            Send
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
