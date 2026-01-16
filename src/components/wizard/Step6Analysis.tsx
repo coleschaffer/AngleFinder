@@ -49,77 +49,94 @@ export function Step6Analysis() {
         }))
       );
 
-      // Analyze sources in parallel batches of 8
-      // Note: Higher values may hit Claude API rate limits or cause timeouts
-      const batchSize = 8;
-      for (let i = 0; i < sources.length; i += batchSize) {
-        const batch = sources.slice(i, i + batchSize);
-        const batchIds = new Set(batch.map(s => s.id));
+      // Rolling concurrent pool - maintains N active tasks at all times
+      // As each completes, immediately starts the next one
+      const concurrencyLimit = 8;
+      const queue = [...sources];
+      const activeIds = new Set<string>();
+      const executing = new Map<string, Promise<void>>();
 
-        // Mark all sources in this batch as "analyzing"
-        setAnalyzingIds(batchIds);
+      const analyzeSource = async (source: Source) => {
+        activeIds.add(source.id);
+        setAnalyzingIds(new Set(activeIds));
+
+        // Mark as analyzing
         setStatusMessages(prev =>
           prev.map(s =>
-            batchIds.has(s.id)
-              ? { ...s, message: `Analyzing: ${sources.find(src => src.id === s.id)?.title.slice(0, 50)}...`, status: 'analyzing' as const }
+            s.id === source.id
+              ? { ...s, message: `Analyzing: ${source.title.slice(0, 50)}...`, status: 'analyzing' as const }
               : s
           )
         );
 
-        const batchResults = await Promise.all(
-          batch.map(async source => {
-            try {
-              const response = await fetch('/api/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  source,
-                  niche: getNicheName(),
-                  product: wizard.productDescription,
-                  strategy: wizard.strategy,
-                }),
-              });
+        try {
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              source,
+              niche: getNicheName(),
+              product: wizard.productDescription,
+              strategy: wizard.strategy,
+            }),
+          });
 
-              if (!response.ok) {
-                throw new Error('Analysis failed');
-              }
+          if (!response.ok) {
+            throw new Error('Analysis failed');
+          }
 
-              const result: AnalysisResult = await response.json();
+          const result: AnalysisResult = await response.json();
 
-              // Update status to success
-              setStatusMessages(prev =>
-                prev.map(s =>
-                  s.id === source.id
-                    ? {
-                        ...s,
-                        message: `Completed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
-                        status: 'success' as const,
-                      }
-                    : s
-                )
-              );
+          // Update status to success
+          setStatusMessages(prev =>
+            prev.map(s =>
+              s.id === source.id
+                ? {
+                    ...s,
+                    message: `Completed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
+                    status: 'success' as const,
+                  }
+                : s
+            )
+          );
 
-              return result;
-            } catch (error) {
-              console.error('Analysis error for source:', source.id, error);
+          allResults.push(result);
+        } catch (error) {
+          console.error('Analysis error for source:', source.id, error);
 
-              // Update status to error
-              setStatusMessages(prev =>
-                prev.map(s =>
-                  s.id === source.id
-                    ? { ...s, message: `Failed: ${source.title.slice(0, 40)}...`, status: 'error' as const }
-                    : s
-                )
-              );
+          // Update status to error
+          setStatusMessages(prev =>
+            prev.map(s =>
+              s.id === source.id
+                ? { ...s, message: `Failed: ${source.title.slice(0, 40)}...`, status: 'error' as const }
+                : s
+            )
+          );
+        } finally {
+          activeIds.delete(source.id);
+          executing.delete(source.id);
+          setAnalyzingIds(new Set(activeIds));
+        }
+      };
 
-              return null;
-            }
-          })
-        );
+      // Start initial batch up to concurrency limit
+      while (queue.length > 0 && executing.size < concurrencyLimit) {
+        const source = queue.shift()!;
+        const promise = analyzeSource(source);
+        executing.set(source.id, promise);
+      }
 
-        // Add successful results
-        const successfulResults = batchResults.filter((r): r is AnalysisResult => r !== null);
-        allResults.push(...successfulResults);
+      // As each completes, start the next one
+      while (executing.size > 0) {
+        // Wait for any one to complete
+        await Promise.race(executing.values());
+
+        // Start new tasks up to the limit
+        while (queue.length > 0 && executing.size < concurrencyLimit) {
+          const source = queue.shift()!;
+          const promise = analyzeSource(source);
+          executing.set(source.id, promise);
+        }
       }
 
       setIsAnalyzing(false);
