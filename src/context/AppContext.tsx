@@ -99,7 +99,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [favoriteClaims, setFavoriteClaims] = useLocalStorage<string[]>('angle-finder-favorite-claims', []);
   const [favoriteHooks, setFavoriteHooks] = useLocalStorage<string[]>('angle-finder-favorite-hooks', []);
-  const [customCategories, setCustomCategories] = useLocalStorage<SourceCategory[]>('angle-finder-custom-categories', []);
+  const [customCategories, setCustomCategories] = useLocalStorage<SourceCategory[]>('angle-finder-custom-categories', [], {
+    // Migration: convert old object format to new array format
+    deserialize: (value) => {
+      try {
+        const parsed = JSON.parse(value);
+        // If it's already an array, return it
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+        // If it's the old object format, flatten all categories into a single array
+        if (typeof parsed === 'object' && parsed !== null) {
+          const allCategories: SourceCategory[] = [];
+          for (const key in parsed) {
+            if (Array.isArray(parsed[key])) {
+              allCategories.push(...parsed[key]);
+            }
+          }
+          return allCategories;
+        }
+        return [];
+      } catch {
+        return [];
+      }
+    },
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [resultsView, setResultsView] = useState<'claims' | 'hooks' | 'favorites'>('hooks');
   const [filterAngleType, setFilterAngleType] = useState<string | null>(null);

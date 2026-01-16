@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void] {
+interface UseLocalStorageOptions<T> {
+  // Custom deserializer for migration purposes
+  deserialize?: (value: string) => T;
+}
+
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T,
+  options?: UseLocalStorageOptions<T>
+): [T, (value: T | ((prev: T) => T)) => void] {
   // State to store our value
   const [storedValue, setStoredValue] = useState<T>(initialValue);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -14,7 +23,15 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
     try {
       const item = window.localStorage.getItem(key);
       if (item) {
-        setStoredValue(JSON.parse(item));
+        const parsed = options?.deserialize
+          ? options.deserialize(item)
+          : JSON.parse(item);
+        setStoredValue(parsed);
+
+        // If we used a custom deserializer, save back the migrated format
+        if (options?.deserialize) {
+          window.localStorage.setItem(key, JSON.stringify(parsed));
+        }
       }
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
