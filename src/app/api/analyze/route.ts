@@ -324,6 +324,8 @@ export async function POST(request: NextRequest) {
     const body: AnalyzeRequest = await request.json();
     const { source, niche, product, strategy } = body;
 
+    console.log(`Analyzing source: ${source.id} (${source.type})`);
+
     // Get content based on source type
     let content: string | null = null;
 
@@ -334,22 +336,25 @@ export async function POST(request: NextRequest) {
       }
     } else if (source.type === 'reddit') {
       content = await getRedditContent(source.url);
-    } else if (source.type === 'research') {
-      // Handle both PubMed and PMC URLs
-      const pmid = source.url.match(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d+)/)?.[1] ||
-                   source.url.match(/\/(\d+)\/?$/)?.[1];
-      if (pmid) {
-        content = await getPubMedAbstract(pmid);
+    } else if (source.type === 'research' || source.type === 'scholar' || source.type === 'arxiv' || source.type === 'preprint') {
+      // Academic sources - use stored abstract/snippet first
+      content = getAcademicContent(source);
+
+      // Fallback: fetch PubMed abstract if not stored
+      if ((!content || content.length < 100) && source.type === 'research') {
+        const pmid = source.url.match(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d+)/)?.[1] ||
+                     source.url.match(/\/(\d+)\/?$/)?.[1];
+        if (pmid) {
+          content = await getPubMedAbstract(pmid);
+        }
       }
     } else if (source.type === 'sciencedaily') {
       content = await getScienceDailyContent(source.url);
-    } else if (source.type === 'scholar' || source.type === 'arxiv' || source.type === 'preprint') {
-      // Academic sources - use stored abstract/snippet
-      content = getAcademicContent(source);
     }
 
     // If we couldn't get content, use Claude to analyze based on title/metadata
     if (!content || content.length < 100) {
+      console.log(`No content found for ${source.id}, using title/metadata fallback`);
       content = `Title: ${source.title}\nSource: ${source.url}\nType: ${source.type}`;
 
       // Ask Claude to use its knowledge to analyze
@@ -361,6 +366,8 @@ ${source.author ? `Author/Channel: ${source.author}` : ''}
 Based on this title and your knowledge of this topic, provide an analysis as if you had access to the full content.`;
 
       content = metaPrompt;
+    } else {
+      console.log(`Content found for ${source.id}: ${content.length} chars`);
     }
 
     // Run the analysis
@@ -378,8 +385,9 @@ Based on this title and your knowledge of this topic, provide an analysis as if 
     return NextResponse.json(result);
   } catch (error) {
     console.error('Analyze API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to analyze source' },
+      { error: `Failed to analyze source: ${errorMessage}` },
       { status: 500 }
     );
   }

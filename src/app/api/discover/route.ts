@@ -169,6 +169,26 @@ async function searchResearch(query: string): Promise<Source[]> {
 
         if (summaryResponse.ok) {
           const summaryData = await summaryResponse.json();
+
+          // Also fetch abstracts for these articles
+          await new Promise(resolve => setTimeout(resolve, 350));
+          const abstractResponse = await fetch(
+            `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.join(',')}&rettype=abstract&retmode=text&${toolParams}`
+          );
+          const abstractsText = abstractResponse.ok ? await abstractResponse.text() : '';
+          // Parse abstracts - they're separated by double newlines
+          const abstractsMap = new Map<string, string>();
+          const abstractBlocks = abstractsText.split(/\n\n(?=\d+\. )/);
+          for (const block of abstractBlocks) {
+            const pmidMatch = block.match(/PMID: (\d+)/);
+            if (pmidMatch) {
+              const abstractMatch = block.match(/Abstract\n([\s\S]*?)(?=\n\n|PMID:|$)/i);
+              if (abstractMatch) {
+                abstractsMap.set(pmidMatch[1], abstractMatch[1].trim());
+              }
+            }
+          }
+
           for (const id of ids) {
             const article = summaryData.result?.[id];
             if (article) {
@@ -179,6 +199,8 @@ async function searchResearch(query: string): Promise<Source[]> {
                 url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
                 author: article.authors?.[0]?.name || 'Unknown',
                 publishDate: article.pubdate,
+                abstract: abstractsMap.get(id) || '',
+                snippet: (abstractsMap.get(id) || '').slice(0, 200),
               });
             }
           }
