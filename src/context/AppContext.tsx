@@ -150,10 +150,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addDiscoveredSources = useCallback((sources: Source[]) => {
-    setWizard(prev => ({
-      ...prev,
-      discoveredSources: [...prev.discoveredSources, ...sources],
-    }));
+    setWizard(prev => {
+      // Deduplicate by ID
+      const existingIds = new Set(prev.discoveredSources.map(s => s.id));
+      const newSources = sources.filter(s => !existingIds.has(s.id));
+      return {
+        ...prev,
+        discoveredSources: [...prev.discoveredSources, ...newSources],
+      };
+    });
   }, []);
 
   const toggleSourceSelection = useCallback((sourceId: string) => {
