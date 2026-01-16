@@ -38,6 +38,7 @@ export function Sidebar() {
     resetWizard,
     favoriteClaims,
     favoriteHooks,
+    generatedHooks,
   } = useApp();
 
   const [showFeedback, setShowFeedback] = useState(false);
@@ -150,10 +151,17 @@ export function Sidebar() {
                 {sessions.map(session => {
                   const totalHooks = session.results.reduce((acc, r) => acc + r.hooks.length, 0);
                   const totalClaims = session.results.reduce((acc, r) => acc + r.claims.length, 0);
+                  // Get source IDs for this session to find its generated hooks
+                  const sessionSourceIds = new Set(session.results.map(r => r.sourceId));
                   // Count favorites by checking against the actual favorites arrays
-                  const totalFavorites = session.results.reduce((acc, r) =>
+                  const hookAndClaimFavorites = session.results.reduce((acc, r) =>
                     acc + r.hooks.filter(h => favoriteHooks.includes(h.id)).length + r.claims.filter(c => favoriteClaims.includes(c.id)).length, 0
                   );
+                  // Count favorited generated hooks that belong to this session
+                  const generatedFavorites = generatedHooks.filter(h =>
+                    sessionSourceIds.has(h.sourceId) && favoriteHooks.includes(h.id)
+                  ).length;
+                  const totalFavorites = hookAndClaimFavorites + generatedFavorites;
                   const isActive = currentSession?.id === session.id;
 
                   return (
