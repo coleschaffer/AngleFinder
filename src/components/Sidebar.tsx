@@ -80,7 +80,7 @@ export function Sidebar() {
 
   return (
     <div
-      className={`border-r border-[var(--ca-gray-dark)] bg-[var(--ca-dark)] flex flex-col h-full transition-all duration-300 ease-in-out ${
+      className={`border-r border-[var(--ca-gray-dark)] bg-[var(--ca-dark)] flex flex-col h-full transition-[width] duration-200 ease-out ${
         sidebarOpen ? 'w-72' : 'w-12'
       }`}
     >

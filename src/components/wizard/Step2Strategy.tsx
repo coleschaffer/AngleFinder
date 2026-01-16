@@ -59,9 +59,7 @@ export function Step2Strategy() {
               key={strategy.id}
               onClick={() => setStrategy(strategy.id)}
               className={`card card-hover text-left transition-all ${
-                isSelected
-                  ? 'border-[var(--ca-gold)]'
-                  : ''
+                isSelected ? 'card-selected' : ''
               }`}
             >
               <div className="flex items-center gap-3 mb-4">

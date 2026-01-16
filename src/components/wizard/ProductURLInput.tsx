@@ -131,7 +131,7 @@ export function ProductURLInput() {
 
       {/* Recent Products */}
       {savedProductURLs.length > 0 && (
-        <div className="border-t border-[var(--ca-gray-dark)] pt-3 mt-3">
+        <div className="border-t border-[var(--ca-gray-dark)] py-3 mt-3">
           <button
             onClick={() => setShowSaved(!showSaved)}
             className="flex items-center gap-2 text-sm text-[var(--ca-gray-light)] hover:text-[var(--ca-gold)] transition-colors w-full"

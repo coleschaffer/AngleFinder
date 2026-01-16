@@ -179,6 +179,10 @@ body {
   border-color: var(--ca-gold);
 }
 
+.card-selected {
+  border-color: var(--ca-gold);
+}
+
 /* Form inputs */
 .input {
   width: 100%;
