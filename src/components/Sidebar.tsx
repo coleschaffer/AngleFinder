@@ -21,14 +21,6 @@ import {
 import { NICHES } from '@/data/niches';
 import { useState, useEffect, useRef } from 'react';
 
-interface FeedbackItem {
-  id: string;
-  email: string;
-  message: string;
-  date: string;
-  userAgent: string;
-}
-
 export function Sidebar() {
   const {
     sidebarOpen,
@@ -113,6 +105,103 @@ export function Sidebar() {
     } catch (error) {
       console.error('Error submitting feedback:', error);
     }
+  };
+
+  // Feedback Modal - rendered outside sidebar to avoid transform issues
+  const FeedbackModal = () => {
+    if (!showFeedback) return null;
+
+    return (
+      <div
+        className="fixed inset-0 feedback-backdrop flex items-center justify-center z-[100] p-4"
+        onClick={() => setShowFeedback(false)}
+      >
+        <div
+          className="feedback-modal w-full max-w-md sm:max-w-lg bg-gradient-to-b from-[var(--ca-dark)] to-[var(--ca-black)] border border-[var(--ca-gray-dark)] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {feedbackSent ? (
+            /* Success State */
+            <div className="py-10 sm:py-12 px-6 sm:px-8">
+              <div className="flex flex-col items-center">
+                <div className="success-circle w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[var(--ca-gold)] flex items-center justify-center">
+                  <svg className="w-7 h-7 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none">
+                    <path
+                      className="success-check"
+                      d="M5 13l4 4L19 7"
+                      stroke="var(--ca-black)"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-bold mt-4 mb-2">
+                  Thank You!
+                </h3>
+                <p className="text-[var(--ca-gray-light)] text-center text-sm">
+                  Your feedback has been submitted.
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Form State */
+            <>
+              {/* Header */}
+              <div className="relative px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
+                <div className="flex items-start justify-between">
+                  <h3 className="text-lg sm:text-xl font-semibold">Send Feedback</h3>
+                  <button
+                    onClick={() => setShowFeedback(false)}
+                    className="p-2 rounded-lg hover:bg-[var(--ca-gray-dark)] transition-colors group"
+                  >
+                    <X className="w-5 h-5 text-[var(--ca-gray)] group-hover:text-white transition-colors" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-3 sm:space-y-4">
+                <input
+                  type="email"
+                  value={feedbackEmail}
+                  onChange={(e) => setFeedbackEmail(e.target.value)}
+                  placeholder="Your email"
+                  className="input"
+                />
+                <div className="relative">
+                  <textarea
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="Share your thoughts, suggestions, or report issues..."
+                    className="feedback-textarea w-full min-h-[100px] sm:min-h-[120px] p-3 sm:p-4 bg-[var(--ca-gray-dark)] border border-[var(--ca-gray)] rounded-lg text-white placeholder:text-[var(--ca-gray-light)] resize-none transition-all duration-200 focus:outline-none"
+                  />
+                </div>
+
+                {/* Footer */}
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
+                  <button
+                    onClick={() => setShowFeedback(false)}
+                    className="btn btn-ghost"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitFeedback}
+                    disabled={!feedbackText.trim() || !feedbackEmail.trim()}
+                    className="btn btn-primary"
+                  >
+                    <Send className="w-4 h-4" />
+                    Send
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // Sidebar content (shared between mobile and desktop)
@@ -256,99 +345,6 @@ export function Sidebar() {
           Send Feedback
         </button>
       </div>
-
-      {/* Feedback Modal */}
-      {showFeedback && (
-        <div className="fixed inset-0 feedback-backdrop flex items-center justify-center z-[60] p-4">
-          <div
-            className="feedback-modal w-full max-w-lg bg-gradient-to-b from-[var(--ca-dark)] to-[var(--ca-black)] border border-[var(--ca-gray-dark)] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {feedbackSent ? (
-              /* Success State */
-              <div className="py-12 px-8">
-                <div className="flex flex-col items-center">
-                  <div className="success-circle w-16 h-16 rounded-full bg-[var(--ca-gold)] flex items-center justify-center">
-                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-                      <path
-                        className="success-check"
-                        d="M5 13l4 4L19 7"
-                        stroke="var(--ca-black)"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-
-                  <h3 className="text-xl font-bold mt-4 mb-2">
-                    Thank You!
-                  </h3>
-                  <p className="text-[var(--ca-gray-light)] text-center text-sm">
-                    Your feedback has been submitted.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              /* Form State */
-              <>
-                {/* Header */}
-                <div className="relative px-6 pt-6 pb-4">
-                  <div className="flex items-start justify-between">
-                    <h3 className="text-xl font-semibold">Send Feedback</h3>
-                    <button
-                      onClick={() => setShowFeedback(false)}
-                      className="p-2 rounded-lg hover:bg-[var(--ca-gray-dark)] transition-colors group"
-                    >
-                      <X className="w-5 h-5 text-[var(--ca-gray)] group-hover:text-white transition-colors" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Body */}
-                <div className="px-6 pb-6 space-y-4">
-                  <input
-                    type="email"
-                    value={feedbackEmail}
-                    onChange={(e) => setFeedbackEmail(e.target.value)}
-                    placeholder="Your email"
-                    className="input"
-                    autoFocus
-                  />
-                  <div className="relative">
-                    <textarea
-                      value={feedbackText}
-                      onChange={(e) => setFeedbackText(e.target.value)}
-                      placeholder="Share your thoughts, suggestions, or report issues..."
-                      className="feedback-textarea w-full min-h-[120px] p-4 bg-[var(--ca-gray-dark)] border border-[var(--ca-gray)] rounded-lg text-white placeholder:text-[var(--ca-gray-light)] resize-none transition-all duration-200 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Footer */}
-                  <div className="flex justify-end pt-2">
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => setShowFeedback(false)}
-                        className="btn btn-ghost"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSubmitFeedback}
-                        disabled={!feedbackText.trim() || !feedbackEmail.trim()}
-                        className="btn btn-primary"
-                      >
-                        <Send className="w-4 h-4" />
-                        Send
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -390,32 +386,40 @@ export function Sidebar() {
         >
           <SidebarContent />
         </div>
+
+        {/* Feedback Modal - rendered outside drawer */}
+        <FeedbackModal />
       </>
     );
   }
 
   // Desktop: Standard sidebar with toggle
   return (
-    <div
-      className={`hidden md:flex border-r border-[var(--ca-gray-dark)] bg-[var(--ca-dark)] flex-col h-full transition-[width] duration-200 ease-out ${
-        sidebarOpen ? 'w-72' : 'w-12'
-      }`}
-    >
-      {/* Collapsed State */}
-      {!sidebarOpen && (
-        <div className="flex flex-col items-center py-4">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg hover:bg-[var(--ca-gray-dark)] transition-colors"
-            title="Open sidebar"
-          >
-            <PanelLeft className="w-5 h-5 text-[var(--ca-gray-light)]" />
-          </button>
-        </div>
-      )}
+    <>
+      <div
+        className={`hidden md:flex border-r border-[var(--ca-gray-dark)] bg-[var(--ca-dark)] flex-col h-full transition-[width] duration-200 ease-out ${
+          sidebarOpen ? 'w-72' : 'w-12'
+        }`}
+      >
+        {/* Collapsed State */}
+        {!sidebarOpen && (
+          <div className="flex flex-col items-center py-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg hover:bg-[var(--ca-gray-dark)] transition-colors"
+              title="Open sidebar"
+            >
+              <PanelLeft className="w-5 h-5 text-[var(--ca-gray-light)]" />
+            </button>
+          </div>
+        )}
 
-      {/* Expanded State */}
-      {sidebarOpen && <SidebarContent />}
-    </div>
+        {/* Expanded State */}
+        {sidebarOpen && <SidebarContent />}
+      </div>
+
+      {/* Feedback Modal - rendered outside sidebar */}
+      <FeedbackModal />
+    </>
   );
 }
