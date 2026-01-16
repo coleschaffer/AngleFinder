@@ -411,7 +411,7 @@ export function Sidebar() {
       >
         {/* Collapsed State */}
         {!sidebarOpen && (
-          <div className="flex flex-col items-center py-4">
+          <div className="flex flex-col items-center py-4 h-full">
             <button
               onClick={() => setSidebarOpen(true)}
               className="p-2 rounded-lg hover:bg-[var(--ca-gray-dark)] transition-colors"
