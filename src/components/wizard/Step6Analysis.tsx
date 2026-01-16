@@ -49,8 +49,9 @@ export function Step6Analysis() {
         }))
       );
 
-      // Analyze sources in parallel batches of 5
-      const batchSize = 5;
+      // Analyze sources in parallel batches of 8
+      // Note: Higher values may hit Claude API rate limits or cause timeouts
+      const batchSize = 8;
       for (let i = 0; i < sources.length; i += batchSize) {
         const batch = sources.slice(i, i + batchSize);
         const batchIds = new Set(batch.map(s => s.id));

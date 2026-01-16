@@ -652,9 +652,13 @@ export function Step7Results() {
         {resultsView === 'favorites' && (
           <>
             {favoriteClaimItems.length === 0 && favoriteHookItems.length === 0 && favoriteGeneratedItems.length === 0 ? (
-              <p className="text-center text-[var(--ca-gray-light)] py-12">
-                No favorites yet. Star claims and hooks to save them here.
-              </p>
+              <div className="text-center py-12">
+                <Star className="w-12 h-12 text-[var(--ca-gray-dark)] mx-auto mb-4" />
+                <p className="text-[var(--ca-gray-light)] mb-2">No favorites yet</p>
+                <p className="text-sm text-[var(--ca-gray)]">
+                  Star claims and hooks to save them here for quick access.
+                </p>
+              </div>
             ) : (
               <>
                 {favoriteHookItems.length > 0 && (
