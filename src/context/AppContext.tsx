@@ -64,8 +64,8 @@ interface AppContextType {
   setResultsView: (view: 'claims' | 'hooks' | 'favorites') => void;
   filterAngleType: string | null;
   setFilterAngleType: (type: string | null) => void;
-  sortResultsBy: 'virality' | 'source';
-  setSortResultsBy: (sort: 'virality' | 'source') => void;
+  sortResultsBy: 'virality' | 'source' | 'bridge';
+  setSortResultsBy: (sort: 'virality' | 'source' | 'bridge') => void;
 }
 
 const initialWizardState: WizardState = {
@@ -96,7 +96,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [resultsView, setResultsView] = useState<'claims' | 'hooks' | 'favorites'>('hooks');
   const [filterAngleType, setFilterAngleType] = useState<string | null>(null);
-  const [sortResultsBy, setSortResultsBy] = useState<'virality' | 'source'>('virality');
+  const [sortResultsBy, setSortResultsBy] = useState<'virality' | 'source' | 'bridge'>('virality');
 
   // Wizard actions
   const setStep = useCallback((step: number) => {
