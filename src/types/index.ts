@@ -82,6 +82,8 @@ export interface Hook {
   viralityScore: ViralityScore;
   sampleAdOpener: string;
   isFavorite?: boolean;
+  isVariation?: boolean;
+  parentHookId?: string;
 }
 
 export interface AnalysisResult {

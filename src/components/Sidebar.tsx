@@ -50,28 +50,32 @@ export function Sidebar() {
     return niche?.name || nicheId;
   };
 
-  const handleSubmitFeedback = () => {
+  const handleSubmitFeedback = async () => {
     if (!feedbackText.trim() || !feedbackEmail.trim()) return;
 
-    const feedback: FeedbackItem = {
-      id: crypto.randomUUID(),
-      email: feedbackEmail.trim(),
-      message: feedbackText.trim(),
-      date: new Date().toISOString(),
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-    };
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: feedbackEmail.trim(),
+          message: feedbackText.trim(),
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        }),
+      });
 
-    // Store in localStorage
-    const existingFeedback = JSON.parse(localStorage.getItem('angle-finder-feedback') || '[]');
-    localStorage.setItem('angle-finder-feedback', JSON.stringify([feedback, ...existingFeedback]));
+      if (!response.ok) throw new Error('Failed to submit feedback');
 
-    setFeedbackEmail('');
-    setFeedbackText('');
-    setFeedbackSent(true);
-    setTimeout(() => {
-      setShowFeedback(false);
-      setFeedbackSent(false);
-    }, 2000);
+      setFeedbackEmail('');
+      setFeedbackText('');
+      setFeedbackSent(true);
+      setTimeout(() => {
+        setShowFeedback(false);
+        setFeedbackSent(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
   };
 
   return (

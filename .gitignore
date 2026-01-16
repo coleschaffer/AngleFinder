@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# feedback data (server-side storage)
+feedback-data.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

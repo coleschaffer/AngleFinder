@@ -17,11 +17,16 @@ export default function AdminPage() {
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadFeedback = () => {
+  const loadFeedback = async () => {
     setIsLoading(true);
-    const stored = localStorage.getItem('angle-finder-feedback');
-    if (stored) {
-      setFeedback(JSON.parse(stored));
+    try {
+      const response = await fetch('/api/feedback');
+      if (response.ok) {
+        const data = await response.json();
+        setFeedback(data.feedback || []);
+      }
+    } catch (error) {
+      console.error('Error loading feedback:', error);
     }
     setIsLoading(false);
   };
@@ -30,16 +35,27 @@ export default function AdminPage() {
     loadFeedback();
   }, []);
 
-  const deleteFeedback = (id: string) => {
-    const updated = feedback.filter(f => f.id !== id);
-    setFeedback(updated);
-    localStorage.setItem('angle-finder-feedback', JSON.stringify(updated));
+  const deleteFeedback = async (id: string) => {
+    try {
+      const response = await fetch(`/api/feedback?id=${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setFeedback(prev => prev.filter(f => f.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+    }
   };
 
-  const clearAllFeedback = () => {
+  const clearAllFeedback = async () => {
     if (confirm('Are you sure you want to delete all feedback?')) {
-      setFeedback([]);
-      localStorage.setItem('angle-finder-feedback', JSON.stringify([]));
+      try {
+        const response = await fetch('/api/feedback?clearAll=true', { method: 'DELETE' });
+        if (response.ok) {
+          setFeedback([]);
+        }
+      } catch (error) {
+        console.error('Error clearing feedback:', error);
+      }
     }
   };
 

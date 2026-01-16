@@ -37,6 +37,7 @@ interface AppContextType {
   setIsAnalyzing: (isAnalyzing: boolean) => void;
   setAnalysisProgress: (progress: AnalysisProgress | null) => void;
   setResults: (results: AnalysisResult[]) => void;
+  addHookVariation: (sourceId: string, parentHookId: string, variation: Hook) => void;
   resetWizard: () => void;
 
   // Sessions/History
@@ -193,6 +194,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWizard(prev => ({ ...prev, results }));
   }, []);
 
+  const addHookVariation = useCallback((sourceId: string, parentHookId: string, variation: Hook) => {
+    // Add variation to wizard results
+    setWizard(prev => ({
+      ...prev,
+      results: prev.results.map(result => {
+        if (result.sourceId === sourceId) {
+          // Find the index of the parent hook and insert variation after it
+          const parentIndex = result.hooks.findIndex(h => h.id === parentHookId);
+          const newHooks = [...result.hooks];
+          if (parentIndex !== -1) {
+            newHooks.splice(parentIndex + 1, 0, variation);
+          } else {
+            newHooks.push(variation);
+          }
+          return { ...result, hooks: newHooks };
+        }
+        return result;
+      }),
+    }));
+
+    // Also update the current session if viewing one
+    if (currentSession) {
+      setSessions(prev => prev.map(session => {
+        if (session.id === currentSession.id) {
+          return {
+            ...session,
+            results: session.results.map(result => {
+              if (result.sourceId === sourceId) {
+                const parentIndex = result.hooks.findIndex(h => h.id === parentHookId);
+                const newHooks = [...result.hooks];
+                if (parentIndex !== -1) {
+                  newHooks.splice(parentIndex + 1, 0, variation);
+                } else {
+                  newHooks.push(variation);
+                }
+                return { ...result, hooks: newHooks };
+              }
+              return result;
+            }),
+          };
+        }
+        return session;
+      }));
+    }
+  }, [currentSession, setSessions]);
+
   const resetWizard = useCallback(() => {
     setWizard(initialWizardState);
     setCurrentSession(null);
@@ -311,6 +358,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsAnalyzing,
         setAnalysisProgress,
         setResults,
+        addHookVariation,
         resetWizard,
         sessions,
         currentSession,
