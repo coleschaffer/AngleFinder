@@ -3,7 +3,7 @@
 import { useApp } from '@/context/AppContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SavedProductURL } from '@/types';
-import { Link2, Loader2, ChevronDown, ChevronUp, Trash2, Clock, Download } from 'lucide-react';
+import { Link2, Loader2, ChevronDown, ChevronUp, Trash2, Clock, Download, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 
 export function ProductURLInput() {
@@ -159,7 +159,7 @@ export function ProductURLInput() {
               {savedProductURLs.map((saved) => (
                 <div
                   key={saved.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ca-gray-dark)]/50 hover:bg-[var(--ca-gray-dark)] transition-colors group"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ca-gray-dark)]/50 hover:bg-[var(--ca-gray-dark)] transition-colors"
                 >
                   <button
                     onClick={() => handleSelectSaved(saved)}
@@ -167,12 +167,22 @@ export function ProductURLInput() {
                   >
                     {saved.productName}
                   </button>
+                  <a
+                    href={saved.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-0.5 rounded hover:bg-[var(--ca-gold)]/20 text-[var(--ca-gray-light)] hover:text-[var(--ca-gold)] transition-all"
+                    title="Open URL"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleteConfirmId(saved.id);
                     }}
-                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-[var(--ca-gray-light)] hover:text-red-400 transition-all"
+                    className="p-0.5 rounded hover:bg-red-500/20 text-[var(--ca-gray-light)] hover:text-red-400 transition-all"
                     title="Remove"
                   >
                     <Trash2 className="w-3 h-3" />
