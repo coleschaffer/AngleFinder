@@ -495,28 +495,33 @@ Focus on:
     }
 
     // Use Claude to generate optimal search queries
-    const queryPrompt = `Generate ${Math.max(sourceTypes.length * 2, 4)} specific search queries to find content about these topics.
+    // Ensure at least one query per source type, plus extras for variety
+    const queriesPerType = 2;
+    const totalQueries = sourceTypes.length * queriesPerType;
+
+    const queryPrompt = `Generate exactly ${totalQueries} specific search queries to find content about these topics.
 
 Categories to explore: ${categories.join(', ')}
 Niche context: ${niche}
 Product: ${product}
 Strategy: ${strategy === 'translocate' ? 'Find content from UNRELATED fields that could provide unique, unexpected marketing angles' : 'Find content directly related to this niche with scientific backing'}
 
-For each query, specify which source type it's best suited for based on what the user selected: ${sourceTypes.join(', ')}
+IMPORTANT: You MUST generate exactly ${queriesPerType} queries for EACH of these source types: ${sourceTypes.join(', ')}
 
 Return ONLY a valid JSON array with this exact format (no other text):
-[{"query": "specific search terms", "sourceType": "${sourceTypes[0]}"}]
+[{"query": "specific search terms", "sourceType": "youtube"}]
 
-Guidelines:
-- Make queries specific and likely to surface surprising, counterintuitive content
-- For YouTube/podcasts: use terms that would find expert discussions, interviews, or educational content
-- For Reddit: include relevant subreddit-style terms or community language
-- For Research/PubMed: use scientific/medical terminology
-- For ScienceDaily: use science news-style terms
-- For Google Scholar: use academic terminology
-- For arXiv: use technical/scientific terminology
-- For Preprints: use biomedical research terms
-- ${strategy === 'translocate' ? 'Focus on unexpected connections from unrelated fields' : 'Focus on cutting-edge research and expert insights'}`;
+Guidelines for each source type:
+- youtube: conversational terms, expert names, "explained", "how to"
+- podcast: interview topics, expert discussions, long-form content terms
+- reddit: community language, question formats, discussion topics
+- research: scientific terminology, study types, medical terms
+- sciencedaily: science news angles, discovery terms, breakthrough language
+- scholar: academic terminology, paper titles, formal research terms
+- arxiv: technical/mathematical terms, preprint topics, CS/physics/math terms
+- preprint: biomedical research terms, clinical study language
+
+Strategy guidance: ${strategy === 'translocate' ? 'Focus on unexpected connections from unrelated fields that could provide surprising marketing angles' : 'Focus on cutting-edge research and expert insights directly about this topic'}`;
 
     const queryResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -534,13 +539,13 @@ Guidelines:
       }
     } catch (e) {
       console.error('Failed to parse Claude response:', e);
-      // Fallback queries if parsing fails
-      searchQueries = categories.flatMap(cat =>
-        sourceTypes.map(type => ({
+      // Fallback: generate 2 queries per source type to ensure coverage
+      searchQueries = sourceTypes.flatMap(type =>
+        categories.slice(0, 2).map(cat => ({
           query: `${cat} ${niche} ${strategy === 'translocate' ? 'insights surprising' : 'research science'}`,
           sourceType: type,
         }))
-      ).slice(0, 6);
+      );
     }
 
     console.log('Generated search queries:', searchQueries);
@@ -588,62 +593,81 @@ Guidelines:
       return true;
     });
 
-    // Calculate source type counts for scarcity scoring
-    const typeCounts: Record<string, number> = {};
+    // Log what we got from each source type for debugging
+    const rawTypeCounts: Record<string, number> = {};
     for (const source of allSources) {
-      typeCounts[source.type] = (typeCounts[source.type] || 0) + 1;
+      rawTypeCounts[source.type] = (rawTypeCounts[source.type] || 0) + 1;
     }
-    const totalSources = allSources.length;
-    const numSelectedTypes = sourceTypes.length;
+    console.log('Raw results by source type:', rawTypeCounts);
+    console.log('Selected source types:', sourceTypes);
 
-    // Score and sort sources for diversity
-    // Higher score = better ranking
-    const scoredSources = allSources.map(source => {
+    // Check which selected types returned no results
+    const missingTypes = sourceTypes.filter(type => !rawTypeCounts[type]);
+    if (missingTypes.length > 0) {
+      console.warn('No results from source types:', missingTypes);
+    }
+
+    // Group sources by type and score within each group
+    const sourcesByType: Record<string, Source[]> = {};
+    for (const source of allSources) {
+      if (!sourcesByType[source.type]) {
+        sourcesByType[source.type] = [];
+      }
+      sourcesByType[source.type].push(source);
+    }
+
+    // Score sources within each type (for ordering within the type)
+    const scoreSource = (source: Source): number => {
       let score = 0;
-
-      // Base relevance signals
       if (source.views) {
-        // Normalize views on log scale (YouTube/Reddit can have huge numbers)
         score += Math.min(Math.log10(source.views + 1) * 2, 10);
       }
       if (source.engagement) {
         score += Math.min(Math.log10(source.engagement + 1) * 1.5, 5);
       }
-
-      // Scarcity boost: sources from underrepresented types get a boost
-      // If a type has fewer results than the "fair share", boost it
-      const typeCount = typeCounts[source.type] || 1;
-      const fairShare = totalSources / numSelectedTypes;
-      if (typeCount < fairShare) {
-        // The rarer the type, the bigger the boost (up to 15 points)
-        const scarcityRatio = fairShare / typeCount;
-        score += Math.min(scarcityRatio * 5, 15);
-      }
-
-      // Small boost for sources with abstracts/snippets (more content to analyze)
       if (source.abstract || source.snippet) {
         score += 2;
       }
+      return score;
+    };
 
-      return { source, score };
-    });
+    // Sort each type's sources by score
+    for (const type of Object.keys(sourcesByType)) {
+      sourcesByType[type].sort((a, b) => scoreSource(b) - scoreSource(a));
+    }
 
-    // Sort by score descending
-    scoredSources.sort((a, b) => b.score - a.score);
+    // Interleave sources round-robin style for diversity
+    // This ensures each source type gets fair representation
+    const interleavedSources: Source[] = [];
+    const typeQueues = Object.entries(sourcesByType).map(([type, sources]) => ({
+      type,
+      sources: [...sources],
+      index: 0,
+    }));
 
-    // Extract sorted sources
-    const sortedSources = scoredSources.map(s => s.source);
+    // Keep going until we've taken all sources
+    let hasMore = true;
+    while (hasMore) {
+      hasMore = false;
+      for (const queue of typeQueues) {
+        if (queue.index < queue.sources.length) {
+          interleavedSources.push(queue.sources[queue.index]);
+          queue.index++;
+          hasMore = true;
+        }
+      }
+    }
 
     // Log diversity stats
     const finalTypeCounts: Record<string, number> = {};
-    for (const source of sortedSources.slice(0, 20)) {
+    for (const source of interleavedSources.slice(0, 20)) {
       finalTypeCounts[source.type] = (finalTypeCounts[source.type] || 0) + 1;
     }
     console.log('Source type distribution in first 20:', finalTypeCounts);
 
     // Paginate - 20 per page
     const startIndex = (page - 1) * 20;
-    const paginatedSources = sortedSources.slice(startIndex, startIndex + 20);
+    const paginatedSources = interleavedSources.slice(startIndex, startIndex + 20);
 
     return NextResponse.json({ sources: paginatedSources });
   } catch (error) {
