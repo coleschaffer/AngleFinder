@@ -104,6 +104,11 @@ export interface Hook {
   isFavorite?: boolean;
   isVariation?: boolean;
   parentHookId?: string;
+  isGenerated?: boolean;
+  fromClaimId?: string;
+  sourceName?: string;
+  sourceType?: SourceType;
+  sourceUrl?: string;
 }
 
 export interface AnalysisResult {

@@ -59,11 +59,16 @@ interface AppContextType {
   addCustomCategory: (category: SourceCategory) => void;
   removeCustomCategory: (categoryId: string) => void;
 
+  // Generated Hooks (from variations and claims)
+  generatedHooks: Hook[];
+  addGeneratedHook: (hook: Hook) => void;
+  removeGeneratedHook: (hookId: string) => void;
+
   // UI State
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  resultsView: 'claims' | 'hooks' | 'favorites';
-  setResultsView: (view: 'claims' | 'hooks' | 'favorites') => void;
+  resultsView: 'claims' | 'hooks' | 'generated' | 'favorites';
+  setResultsView: (view: 'claims' | 'hooks' | 'generated' | 'favorites') => void;
   filterAngleType: string | null;
   setFilterAngleType: (type: string | null) => void;
   sortResultsBy: 'virality' | 'source' | 'bridge';
@@ -125,10 +130,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [resultsView, setResultsView] = useState<'claims' | 'hooks' | 'favorites'>('hooks');
+  const [resultsView, setResultsView] = useState<'claims' | 'hooks' | 'generated' | 'favorites'>('hooks');
   const [filterAngleType, setFilterAngleType] = useState<string | null>(null);
   const [sortResultsBy, setSortResultsBy] = useState<'virality' | 'source' | 'bridge'>('virality');
   const [savedProductURLs, setSavedProductURLs] = useLocalStorage<SavedProductURL[]>('angle-finder-saved-urls', []);
+  const [generatedHooks, setGeneratedHooks] = useLocalStorage<Hook[]>('angle-finder-generated-hooks', []);
 
   // Wizard actions
   const setStep = useCallback((step: number) => {
@@ -374,6 +380,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedProductURLs(prev => prev.filter(u => u.id !== urlId));
   }, [setSavedProductURLs]);
 
+  // Generated hooks (variations and from claims)
+  const addGeneratedHook = useCallback((hook: Hook) => {
+    setGeneratedHooks(prev => [{ ...hook, isGenerated: true }, ...prev]);
+  }, [setGeneratedHooks]);
+
+  const removeGeneratedHook = useCallback((hookId: string) => {
+    setGeneratedHooks(prev => prev.filter(h => h.id !== hookId));
+  }, [setGeneratedHooks]);
+
   return (
     <AppContext.Provider
       value={{
@@ -420,6 +435,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         savedProductURLs,
         addSavedProductURL,
         removeSavedProductURL,
+        generatedHooks,
+        addGeneratedHook,
+        removeGeneratedHook,
       }}
     >
       {children}

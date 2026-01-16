@@ -1,12 +1,14 @@
 'use client';
 
 import { useApp } from '@/context/AppContext';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SavedProductURL } from '@/types';
 import { Link2, Loader2, ChevronDown, ChevronUp, Trash2, Clock, Download } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function ProductURLInput() {
   const {
+    wizard,
     setNiche,
     setCustomNiche,
     setProductDescription,
@@ -18,8 +20,25 @@ export function ProductURLInput() {
   const [urlInput, setUrlInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSaved, setShowSaved] = useState(false);
+  const [savedExpandedState, setSavedExpandedState] = useLocalStorage<boolean>('angle-finder-recent-products-expanded', true);
+  const [showSaved, setShowSaved] = useState(savedExpandedState);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Start expanded on step 1, otherwise use saved state
+  useEffect(() => {
+    if (wizard.step === 1) {
+      setShowSaved(true);
+    } else {
+      setShowSaved(savedExpandedState);
+    }
+  }, [wizard.step, savedExpandedState]);
+
+  // Save expanded state to localStorage when changed
+  const toggleShowSaved = () => {
+    const newState = !showSaved;
+    setShowSaved(newState);
+    setSavedExpandedState(newState);
+  };
 
   const handleAnalyzeURL = async () => {
     if (!urlInput.trim()) return;
@@ -131,9 +150,9 @@ export function ProductURLInput() {
 
       {/* Recent Products */}
       {savedProductURLs.length > 0 && (
-        <div className="border-t border-[var(--ca-gray-dark)] py-3 mt-3">
+        <div className="border-t border-[var(--ca-gray-dark)] pt-3 mt-3">
           <button
-            onClick={() => setShowSaved(!showSaved)}
+            onClick={toggleShowSaved}
             className="flex items-center gap-2 text-sm text-[var(--ca-gray-light)] hover:text-[var(--ca-gold)] transition-colors w-full"
           >
             <Clock className="w-4 h-4" />

@@ -27,6 +27,7 @@ import {
   Newspaper,
   GraduationCap,
   FlaskConical,
+  Sparkles,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -77,6 +78,8 @@ export function Step7Results() {
     saveSession,
     currentSession,
     deleteSession,
+    generatedHooks,
+    removeGeneratedHook,
     customCategories,
   } = useApp();
 
@@ -190,7 +193,7 @@ export function Step7Results() {
   }, [allHooks, favoriteHooks]);
 
   // Export functions
-  const exportToMarkdown = (type: 'claims' | 'hooks' | 'all' | 'favorites') => {
+  const exportToMarkdown = (type: 'claims' | 'hooks' | 'all' | 'favorites' | 'generated') => {
     let content = `# Angle Finder Results\n\n`;
     content += `Generated: ${new Date().toLocaleDateString()}\n\n`;
     content += `---\n\n`;
@@ -235,6 +238,9 @@ export function Step7Results() {
       content += exportClaims(sortedClaims);
     } else if (type === 'hooks') {
       content += exportHooks(sortedHooks);
+    } else if (type === 'generated') {
+      content += `## Generated Hooks\n\n`;
+      content += exportHooks(generatedHooks as typeof allHooks);
     } else if (type === 'favorites') {
       if (favoriteClaimItems.length > 0) {
         content += exportClaims(favoriteClaimItems);
@@ -450,6 +456,17 @@ export function Step7Results() {
             Claims ({allClaims.length})
           </button>
           <button
+            onClick={() => setResultsView('generated')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+              resultsView === 'generated'
+                ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
+                : 'text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray-dark)]'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            Generated ({generatedHooks.length})
+          </button>
+          <button
             onClick={() => setResultsView('favorites')}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
               resultsView === 'favorites'
@@ -464,13 +481,19 @@ export function Step7Results() {
         <button
           onClick={() =>
             exportToMarkdown(
-              resultsView === 'favorites' ? 'favorites' : resultsView === 'claims' ? 'claims' : 'hooks'
+              resultsView === 'favorites' ? 'favorites'
+                : resultsView === 'claims' ? 'claims'
+                : resultsView === 'generated' ? 'generated'
+                : 'hooks'
             )
           }
           className="btn btn-secondary text-sm"
         >
           <Download className="w-4 h-4" />
-          Export {resultsView === 'favorites' ? 'Favorites' : resultsView === 'claims' ? 'Claims' : 'Hooks'}
+          Export {resultsView === 'favorites' ? 'Favorites'
+            : resultsView === 'claims' ? 'Claims'
+            : resultsView === 'generated' ? 'Generated'
+            : 'Hooks'}
         </button>
       </div>
 
@@ -582,6 +605,40 @@ export function Step7Results() {
                   sourceUrl={hook.sourceUrl}
                 />
               ))
+            )}
+          </>
+        )}
+
+        {resultsView === 'generated' && (
+          <>
+            {generatedHooks.length === 0 ? (
+              <div className="text-center py-12">
+                <Sparkles className="w-12 h-12 text-[var(--ca-gray-dark)] mx-auto mb-4" />
+                <p className="text-[var(--ca-gray-light)] mb-2">No generated hooks yet</p>
+                <p className="text-sm text-[var(--ca-gray)]">
+                  Generate hooks from claims or create variations of existing hooks to see them here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {generatedHooks.map(hook => (
+                  <div key={hook.id} className="relative group">
+                    <HookCard
+                      hook={hook}
+                      sourceName={hook.sourceName || 'Unknown Source'}
+                      sourceType={hook.sourceType || 'research'}
+                      sourceUrl={hook.sourceUrl || '#'}
+                    />
+                    <button
+                      onClick={() => removeGeneratedHook(hook.id)}
+                      className="absolute top-4 right-16 p-2 rounded-lg opacity-0 group-hover:opacity-100 bg-[var(--ca-gray-dark)] hover:bg-red-500/20 text-[var(--ca-gray-light)] hover:text-red-400 transition-all"
+                      title="Remove generated hook"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}

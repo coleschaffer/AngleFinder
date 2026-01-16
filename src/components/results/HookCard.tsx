@@ -48,7 +48,7 @@ const bridgeDistanceColors: Record<BridgeDistance, string> = {
 };
 
 export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardProps) {
-  const { favoriteHooks, toggleHookFavorite, addHookVariation } = useApp();
+  const { favoriteHooks, toggleHookFavorite, addGeneratedHook, setResultsView } = useApp();
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showVariationInput, setShowVariationInput] = useState(false);
@@ -111,15 +111,19 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
       if (!response.ok) throw new Error('Failed to generate variation');
 
       const data = await response.json();
-      // Add the variation as a new hook (keeps original)
+      // Add the variation to Generated section
       const variationHook: Hook = {
         ...data.hook,
         isVariation: true,
         parentHookId: hook.id,
+        sourceName,
+        sourceType,
+        sourceUrl,
       };
-      addHookVariation(hook.sourceId, hook.id, variationHook);
+      addGeneratedHook(variationHook);
       setShowVariationInput(false);
       setVariationFeedback('');
+      setResultsView('generated');
     } catch (error) {
       console.error('Variation error:', error);
     } finally {

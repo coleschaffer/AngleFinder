@@ -1,6 +1,6 @@
 'use client';
 
-import { Claim, SourceType } from '@/types';
+import { Claim, SourceType, Hook } from '@/types';
 import { useApp } from '@/context/AppContext';
 import {
   Star,
@@ -17,6 +17,8 @@ import {
   GraduationCap,
   FileText,
   FlaskConical,
+  Zap,
+  Loader2,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -39,12 +41,49 @@ const sourceIcons: Record<SourceType, typeof Youtube> = {
 };
 
 export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCardProps) {
-  const { favoriteClaims, toggleClaimFavorite } = useApp();
+  const { favoriteClaims, toggleClaimFavorite, addGeneratedHook, setResultsView, wizard } = useApp();
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const isFavorite = favoriteClaims.includes(claim.id);
   const Icon = sourceIcons[sourceType];
+
+  const handleGenerateHook = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/generate-hook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          claim,
+          sourceName,
+          sourceType,
+          sourceUrl,
+          niche: wizard.customNiche || wizard.niche,
+          product: wizard.productDescription,
+          strategy: wizard.strategy,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to generate hook');
+
+      const data = await response.json();
+      const generatedHook: Hook = {
+        ...data.hook,
+        fromClaimId: claim.id,
+        sourceName,
+        sourceType,
+        sourceUrl,
+      };
+      addGeneratedHook(generatedHook);
+      setResultsView('generated');
+    } catch (error) {
+      console.error('Generate hook error:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleCopy = async () => {
     const text = `CLAIM: ${claim.claim}\n\nEXACT QUOTE: "${claim.exactQuote}"\n\nMECHANISM: ${claim.mechanism}\n\nSOURCE: ${sourceName} (${sourceUrl})`;
@@ -196,6 +235,23 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
             >
               <Download className="w-4 h-4" />
               Export Claim
+            </button>
+            <button
+              onClick={handleGenerateHook}
+              disabled={isGenerating}
+              className="btn btn-primary text-sm flex-1"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" />
+                  Generate Hook
+                </>
+              )}
             </button>
           </div>
         </div>
