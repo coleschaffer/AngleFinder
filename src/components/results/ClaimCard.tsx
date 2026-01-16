@@ -2,7 +2,22 @@
 
 import { Claim, SourceType } from '@/types';
 import { useApp } from '@/context/AppContext';
-import { Star, ChevronDown, ChevronUp, Copy, Check, Download, Youtube, Radio, MessageSquare, BookOpen } from 'lucide-react';
+import {
+  Star,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
+  Download,
+  Youtube,
+  Radio,
+  MessageSquare,
+  BookOpen,
+  Newspaper,
+  GraduationCap,
+  FileText,
+  FlaskConical,
+} from 'lucide-react';
 import { useState } from 'react';
 
 interface ClaimCardProps {
@@ -16,7 +31,11 @@ const sourceIcons: Record<SourceType, typeof Youtube> = {
   youtube: Youtube,
   podcast: Radio,
   reddit: MessageSquare,
-  pubmed: BookOpen,
+  research: BookOpen,
+  sciencedaily: Newspaper,
+  scholar: GraduationCap,
+  arxiv: FileText,
+  preprint: FlaskConical,
 };
 
 export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCardProps) {
@@ -87,13 +106,15 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="tag">
           <Icon className="w-3 h-3" />
-          {sourceType === 'youtube'
-            ? 'YouTube'
-            : sourceType === 'podcast'
-            ? 'Podcast'
-            : sourceType === 'reddit'
-            ? 'Reddit'
-            : 'PubMed'}
+          {sourceType === 'youtube' ? 'YouTube'
+            : sourceType === 'podcast' ? 'Podcast'
+            : sourceType === 'reddit' ? 'Reddit'
+            : sourceType === 'research' ? 'Research'
+            : sourceType === 'sciencedaily' ? 'ScienceDaily'
+            : sourceType === 'scholar' ? 'Scholar'
+            : sourceType === 'arxiv' ? 'arXiv'
+            : sourceType === 'preprint' ? 'Preprint'
+            : sourceType}
         </span>
       </div>
 

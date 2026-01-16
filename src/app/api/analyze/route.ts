@@ -110,6 +110,61 @@ async function getPubMedAbstract(pmid: string): Promise<string | null> {
   }
 }
 
+// Get ScienceDaily article content
+async function getScienceDailyContent(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'AngleFinder/1.0' },
+    });
+
+    if (!response.ok) return null;
+
+    const html = await response.text();
+
+    // Extract article content
+    const titleMatch = html.match(/<h1[^>]*id="headline"[^>]*>([\s\S]*?)<\/h1>/i);
+    const contentMatch = html.match(/<div[^>]*id="story_text"[^>]*>([\s\S]*?)<\/div>/i);
+
+    let content = '';
+    if (titleMatch) {
+      content += `Title: ${titleMatch[1].replace(/<[^>]+>/g, '').trim()}\n\n`;
+    }
+    if (contentMatch) {
+      content += contentMatch[1]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    return content || null;
+  } catch (error) {
+    console.error('ScienceDaily fetch error:', error);
+    return null;
+  }
+}
+
+// Get content from academic sources (uses stored abstract/snippet)
+function getAcademicContent(source: Source): string | null {
+  const parts: string[] = [];
+
+  if (source.title) {
+    parts.push(`Title: ${source.title}`);
+  }
+  if (source.author) {
+    parts.push(`Author: ${source.author}`);
+  }
+  if (source.abstract) {
+    parts.push(`\nAbstract:\n${source.abstract}`);
+  } else if (source.snippet) {
+    parts.push(`\nSummary:\n${source.snippet}`);
+  }
+  if (source.publishDate) {
+    parts.push(`\nPublished: ${source.publishDate}`);
+  }
+
+  return parts.length > 0 ? parts.join('\n') : null;
+}
+
 // Main analysis function using Claude
 async function analyzeContent(
   content: string,
@@ -279,11 +334,18 @@ export async function POST(request: NextRequest) {
       }
     } else if (source.type === 'reddit') {
       content = await getRedditContent(source.url);
-    } else if (source.type === 'pubmed') {
-      const pmid = source.url.match(/\/(\d+)\/?$/)?.[1];
+    } else if (source.type === 'research') {
+      // Handle both PubMed and PMC URLs
+      const pmid = source.url.match(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d+)/)?.[1] ||
+                   source.url.match(/\/(\d+)\/?$/)?.[1];
       if (pmid) {
         content = await getPubMedAbstract(pmid);
       }
+    } else if (source.type === 'sciencedaily') {
+      content = await getScienceDailyContent(source.url);
+    } else if (source.type === 'scholar' || source.type === 'arxiv' || source.type === 'preprint') {
+      // Academic sources - use stored abstract/snippet
+      content = getAcademicContent(source);
     }
 
     // If we couldn't get content, use Claude to analyze based on title/metadata

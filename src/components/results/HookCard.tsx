@@ -16,6 +16,10 @@ import {
   Sparkles,
   RefreshCw,
   Loader2,
+  Newspaper,
+  GraduationCap,
+  FileText,
+  FlaskConical,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -30,7 +34,11 @@ const sourceIcons: Record<SourceType, typeof Youtube> = {
   youtube: Youtube,
   podcast: Radio,
   reddit: MessageSquare,
-  pubmed: BookOpen,
+  research: BookOpen,
+  sciencedaily: Newspaper,
+  scholar: GraduationCap,
+  arxiv: FileText,
+  preprint: FlaskConical,
 };
 
 const bridgeDistanceColors: Record<BridgeDistance, string> = {
@@ -157,13 +165,15 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="tag">
           <Icon className="w-3 h-3" />
-          {sourceType === 'youtube'
-            ? 'YouTube'
-            : sourceType === 'podcast'
-            ? 'Podcast'
-            : sourceType === 'reddit'
-            ? 'Reddit'
-            : 'PubMed'}
+          {sourceType === 'youtube' ? 'YouTube'
+            : sourceType === 'podcast' ? 'Podcast'
+            : sourceType === 'reddit' ? 'Reddit'
+            : sourceType === 'research' ? 'Research'
+            : sourceType === 'sciencedaily' ? 'ScienceDaily'
+            : sourceType === 'scholar' ? 'Scholar'
+            : sourceType === 'arxiv' ? 'arXiv'
+            : sourceType === 'preprint' ? 'Preprint'
+            : sourceType}
         </span>
         <span className={`tag border ${bridgeDistanceColors[hook.bridgeDistance]}`}>
           Bridge: {hook.bridgeDistance}

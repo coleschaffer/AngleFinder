@@ -2,7 +2,19 @@
 
 import { useApp } from '@/context/AppContext';
 import { SourceType } from '@/types';
-import { ArrowLeft, ArrowRight, Youtube, Radio, MessageSquare, BookOpen, Check } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Youtube,
+  Radio,
+  MessageSquare,
+  BookOpen,
+  Check,
+  Newspaper,
+  GraduationCap,
+  FileText,
+  FlaskConical,
+} from 'lucide-react';
 
 export function Step4SourceTypes() {
   const { wizard, toggleSourceType, setStep } = useApp();
@@ -36,10 +48,38 @@ export function Step4SourceTypes() {
       available: true,
     },
     {
-      id: 'pubmed',
-      name: 'PubMed',
+      id: 'research',
+      name: 'Research',
       icon: BookOpen,
-      description: 'Search scientific papers and research studies',
+      description: 'PubMed, NIH, and NCBI scientific papers',
+      available: true,
+    },
+    {
+      id: 'sciencedaily',
+      name: 'ScienceDaily',
+      icon: Newspaper,
+      description: 'Latest science news and research summaries',
+      available: true,
+    },
+    {
+      id: 'scholar',
+      name: 'Google Scholar',
+      icon: GraduationCap,
+      description: 'Academic papers and citations',
+      available: true,
+    },
+    {
+      id: 'arxiv',
+      name: 'arXiv',
+      icon: FileText,
+      description: 'Preprint papers in physics, math, CS, and more',
+      available: true,
+    },
+    {
+      id: 'preprint',
+      name: 'Preprints',
+      icon: FlaskConical,
+      description: 'bioRxiv and medRxiv life science preprints',
       available: true,
     },
   ];

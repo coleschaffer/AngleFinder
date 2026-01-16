@@ -5,6 +5,7 @@ import { NICHES } from '@/data/niches';
 import { Niche } from '@/types';
 import { ChevronDown, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
+import { ProductURLInput } from './ProductURLInput';
 
 export function Step1Niche() {
   const { wizard, setNiche, setCustomNiche, setProductDescription, setStep } = useApp();
@@ -27,6 +28,9 @@ export function Step1Niche() {
           Choose the market you&apos;re creating content for
         </p>
       </div>
+
+      {/* Product URL Input */}
+      <ProductURLInput />
 
       {/* Niche Dropdown */}
       <div className="relative mb-6">

@@ -24,6 +24,9 @@ import {
   FileText,
   Shuffle,
   Target,
+  Newspaper,
+  GraduationCap,
+  FlaskConical,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -41,14 +44,22 @@ const sourceTypeIcons: Record<SourceType, typeof Youtube> = {
   youtube: Youtube,
   podcast: Radio,
   reddit: MessageSquare,
-  pubmed: BookOpen,
+  research: BookOpen,
+  sciencedaily: Newspaper,
+  scholar: GraduationCap,
+  arxiv: FileText,
+  preprint: FlaskConical,
 };
 
 const sourceTypeLabels: Record<SourceType, string> = {
   youtube: 'YouTube',
   podcast: 'Podcasts',
   reddit: 'Reddit',
-  pubmed: 'PubMed',
+  research: 'Research',
+  sciencedaily: 'ScienceDaily',
+  scholar: 'Scholar',
+  arxiv: 'arXiv',
+  preprint: 'Preprints',
 };
 
 export function Step7Results() {

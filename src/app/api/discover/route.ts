@@ -137,94 +137,290 @@ async function searchReddit(query: string): Promise<Source[]> {
   }
 }
 
-// PubMed search (no API key required, but need to identify ourselves)
-async function searchPubMed(query: string): Promise<Source[]> {
+// Research search - combines PubMed, NIH ODS, and PMC
+async function searchResearch(query: string): Promise<Source[]> {
+  const results: Source[] = [];
+  const ncbiApiKey = process.env.NCBI_API_KEY;
+  const apiKeyParam = ncbiApiKey ? `&api_key=${ncbiApiKey}` : '';
+
   try {
     // NCBI recommends identifying your tool
-    const toolParams = 'tool=AngleFinder&email=contact@anglefinder.app';
+    const toolParams = `tool=AngleFinder&email=contact@anglefinder.app${apiKeyParam}`;
 
-    // Search for article IDs
+    // Search PubMed for article IDs
     const searchResponse = await fetch(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=10&retmode=json&sort=relevance&${toolParams}`
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=8&retmode=json&sort=relevance&${toolParams}`
     );
-    if (!searchResponse.ok) {
-      console.error('PubMed search status:', searchResponse.status, searchResponse.statusText);
-      return [];
-    }
-    const searchData = await searchResponse.json();
-    const ids = searchData.esearchresult?.idlist || [];
+    if (searchResponse.ok) {
+      const searchData = await searchResponse.json();
+      const ids = searchData.esearchresult?.idlist || [];
 
-    if (ids.length === 0) return [];
+      if (ids.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 350));
 
-    // Delay to avoid rate limiting (NCBI recommends 3 requests/second max)
-    await new Promise(resolve => setTimeout(resolve, 400));
+        const summaryResponse = await fetch(
+          `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&${toolParams}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `id=${ids.join(',')}`,
+          }
+        );
 
-    // Get article summaries - use POST for reliability
-    const summaryResponse = await fetch(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&${toolParams}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `id=${ids.join(',')}`,
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json();
+          for (const id of ids) {
+            const article = summaryData.result?.[id];
+            if (article) {
+              results.push({
+                id: `research-pubmed-${id}`,
+                type: 'research' as SourceType,
+                title: article.title || 'Untitled',
+                url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+                author: article.authors?.[0]?.name || 'Unknown',
+                publishDate: article.pubdate,
+              });
+            }
+          }
+        }
       }
+    }
+
+    // Also search PMC (PubMed Central) for open access articles
+    await new Promise(resolve => setTimeout(resolve, 350));
+    const pmcResponse = await fetch(
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pmc&term=${encodeURIComponent(query)}&retmax=5&retmode=json&sort=relevance&${toolParams}`
     );
+    if (pmcResponse.ok) {
+      const pmcData = await pmcResponse.json();
+      const pmcIds = pmcData.esearchresult?.idlist || [];
 
-    if (!summaryResponse.ok) {
-      console.error('PubMed summary status:', summaryResponse.status, summaryResponse.statusText);
+      if (pmcIds.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, 350));
+        const pmcSummaryResponse = await fetch(
+          `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pmc&retmode=json&${toolParams}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `id=${pmcIds.join(',')}`,
+          }
+        );
 
-      // Fallback: try efetch to get article metadata via XML
-      await new Promise(resolve => setTimeout(resolve, 400));
-      const efetchResponse = await fetch(
-        `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${ids.join(',')}&rettype=abstract&retmode=xml&${toolParams}`
-      );
+        if (pmcSummaryResponse.ok) {
+          const pmcSummaryData = await pmcSummaryResponse.json();
+          for (const id of pmcIds) {
+            const article = pmcSummaryData.result?.[id];
+            if (article) {
+              results.push({
+                id: `research-pmc-${id}`,
+                type: 'research' as SourceType,
+                title: article.title || 'Untitled',
+                url: `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${id}/`,
+                author: article.authors?.[0]?.name || 'Unknown',
+                publishDate: article.pubdate,
+              });
+            }
+          }
+        }
+      }
+    }
 
-      if (efetchResponse.ok) {
-        const xmlText = await efetchResponse.text();
-        // Parse basic info from XML
-        return ids.map((id: string) => {
-          // Try to extract title from XML
-          const articleRegex = new RegExp(`<PubmedArticle[^>]*>(?:(?!</PubmedArticle>)[\\s\\S])*?<PMID[^>]*>${id}</PMID>(?:(?!</PubmedArticle>)[\\s\\S])*?<ArticleTitle>([^<]+)</ArticleTitle>(?:(?!</PubmedArticle>)[\\s\\S])*?(?:<LastName>([^<]+)</LastName>)?`, 'i');
-          const match = xmlText.match(articleRegex);
-          const title = match?.[1]?.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&') || `PubMed Article ${id}`;
-          const author = match?.[2] || 'Unknown';
+    return results;
+  } catch (error) {
+    console.error('Research search error:', error);
+    return results;
+  }
+}
 
-          return {
-            id: `pubmed-${id}`,
-            type: 'pubmed' as SourceType,
-            title,
-            url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
-            author,
-          };
+// ScienceDaily search via RSS feed
+async function searchScienceDaily(query: string): Promise<Source[]> {
+  try {
+    // Fetch the RSS feed
+    const response = await fetch('https://www.sciencedaily.com/rss/all.xml', {
+      headers: { 'User-Agent': 'AngleFinder/1.0' },
+    });
+
+    if (!response.ok) return [];
+
+    const xml = await response.text();
+
+    // Parse RSS items
+    const items: Source[] = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    const queryLower = query.toLowerCase();
+    const queryTerms = queryLower.split(/\s+/).filter(t => t.length > 2);
+
+    let match;
+    while ((match = itemRegex.exec(xml)) !== null && items.length < 10) {
+      const itemXml = match[1];
+
+      const titleMatch = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
+                         itemXml.match(/<title>(.*?)<\/title>/);
+      const linkMatch = itemXml.match(/<link>(.*?)<\/link>/);
+      const descMatch = itemXml.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) ||
+                        itemXml.match(/<description>(.*?)<\/description>/);
+      const pubDateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/);
+
+      const title = titleMatch?.[1] || '';
+      const description = descMatch?.[1] || '';
+      const combined = (title + ' ' + description).toLowerCase();
+
+      // Filter by query terms
+      const matchCount = queryTerms.filter(term => combined.includes(term)).length;
+      if (matchCount >= Math.min(2, queryTerms.length)) {
+        items.push({
+          id: `sciencedaily-${Date.now()}-${items.length}`,
+          type: 'sciencedaily' as SourceType,
+          title: title.replace(/<[^>]+>/g, ''),
+          url: linkMatch?.[1] || '',
+          snippet: description.replace(/<[^>]+>/g, '').slice(0, 200),
+          publishDate: pubDateMatch?.[1],
+          author: 'ScienceDaily',
         });
       }
-
-      // Ultimate fallback - return IDs only
-      return ids.map((id: string) => ({
-        id: `pubmed-${id}`,
-        type: 'pubmed' as SourceType,
-        title: `PubMed Article ${id}`,
-        url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
-        author: 'Unknown',
-      }));
     }
 
-    const summaryData = await summaryResponse.json();
-
-    return ids.map((id: string) => {
-      const article = summaryData.result?.[id];
-      if (!article) return null;
-      return {
-        id: `pubmed-${id}`,
-        type: 'pubmed' as SourceType,
-        title: article.title || 'Untitled',
-        url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
-        author: article.authors?.[0]?.name || 'Unknown',
-        publishDate: article.pubdate,
-      };
-    }).filter(Boolean) as Source[];
+    return items;
   } catch (error) {
-    console.error('PubMed search error:', error);
+    console.error('ScienceDaily search error:', error);
     return [];
+  }
+}
+
+// Google Scholar search via SerpApi
+async function searchGoogleScholar(query: string): Promise<Source[]> {
+  const apiKey = process.env.SERPAPI_API_KEY;
+  if (!apiKey) {
+    console.warn('SerpApi API key not configured');
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `https://serpapi.com/search.json?engine=google_scholar&q=${encodeURIComponent(query)}&num=10&api_key=${apiKey}`
+    );
+
+    if (!response.ok) {
+      console.error('Google Scholar search failed:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const results = data.organic_results || [];
+
+    return results.map((result: any, index: number) => ({
+      id: `scholar-${result.result_id || index}`,
+      type: 'scholar' as SourceType,
+      title: result.title || 'Untitled',
+      url: result.link || '',
+      author: result.publication_info?.summary?.split(' - ')?.[0] || 'Unknown',
+      snippet: result.snippet || '',
+      publishDate: result.publication_info?.summary?.match(/\d{4}/)?.[0],
+    }));
+  } catch (error) {
+    console.error('Google Scholar search error:', error);
+    return [];
+  }
+}
+
+// arXiv search via Atom API
+async function searchArxiv(query: string): Promise<Source[]> {
+  try {
+    const response = await fetch(
+      `http://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=10`
+    );
+
+    if (!response.ok) return [];
+
+    const xml = await response.text();
+    const entries: Source[] = [];
+
+    const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+    let match;
+
+    while ((match = entryRegex.exec(xml)) !== null) {
+      const entryXml = match[1];
+
+      const idMatch = entryXml.match(/<id>http:\/\/arxiv\.org\/abs\/([\d.]+)(v\d+)?<\/id>/);
+      const titleMatch = entryXml.match(/<title>([\s\S]*?)<\/title>/);
+      const summaryMatch = entryXml.match(/<summary>([\s\S]*?)<\/summary>/);
+      const authorMatch = entryXml.match(/<author>[\s\S]*?<name>(.*?)<\/name>/);
+      const publishedMatch = entryXml.match(/<published>(.*?)<\/published>/);
+
+      const arxivId = idMatch?.[1] || '';
+      const title = titleMatch?.[1]?.replace(/\s+/g, ' ').trim() || 'Untitled';
+      const abstract = summaryMatch?.[1]?.replace(/\s+/g, ' ').trim() || '';
+
+      entries.push({
+        id: `arxiv-${arxivId}`,
+        type: 'arxiv' as SourceType,
+        title,
+        url: `https://arxiv.org/abs/${arxivId}`,
+        author: authorMatch?.[1] || 'Unknown',
+        publishDate: publishedMatch?.[1]?.slice(0, 10),
+        abstract,
+        snippet: abstract.slice(0, 200),
+      });
+    }
+
+    return entries;
+  } catch (error) {
+    console.error('arXiv search error:', error);
+    return [];
+  }
+}
+
+// Preprints search (bioRxiv and medRxiv)
+async function searchPreprints(query: string): Promise<Source[]> {
+  const results: Source[] = [];
+  const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+
+  try {
+    // Fetch recent preprints from both servers (last 30 days)
+    const servers = ['biorxiv', 'medrxiv'];
+
+    for (const server of servers) {
+      try {
+        const response = await fetch(
+          `https://api.${server}.org/details/${server}/30d/0/json`
+        );
+
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        const collection = data.collection || [];
+
+        // Filter by query terms
+        for (const item of collection) {
+          if (results.length >= 10) break;
+
+          const title = (item.title || '').toLowerCase();
+          const abstract = (item.abstract || '').toLowerCase();
+          const combined = title + ' ' + abstract;
+
+          const matchCount = queryTerms.filter(term => combined.includes(term)).length;
+          if (matchCount >= Math.min(2, queryTerms.length)) {
+            results.push({
+              id: `preprint-${server}-${item.doi?.replace(/\//g, '-') || Date.now()}`,
+              type: 'preprint' as SourceType,
+              title: item.title || 'Untitled',
+              url: `https://www.${server}.org/content/${item.doi}`,
+              author: item.authors?.split(';')?.[0] || 'Unknown',
+              publishDate: item.date,
+              abstract: item.abstract,
+              snippet: (item.abstract || '').slice(0, 200),
+            });
+          }
+        }
+      } catch (serverError) {
+        console.error(`${server} search error:`, serverError);
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Preprints search error:', error);
+    return results;
   }
 }
 
@@ -250,7 +446,11 @@ Guidelines:
 - Make queries specific and likely to surface surprising, counterintuitive content
 - For YouTube/podcasts: use terms that would find expert discussions, interviews, or educational content
 - For Reddit: include relevant subreddit-style terms or community language
-- For PubMed: use scientific/medical terminology
+- For Research/PubMed: use scientific/medical terminology
+- For ScienceDaily: use science news-style terms
+- For Google Scholar: use academic terminology
+- For arXiv: use technical/scientific terminology
+- For Preprints: use biomedical research terms
 - ${strategy === 'translocate' ? 'Focus on unexpected connections from unrelated fields' : 'Focus on cutting-edge research and expert insights'}`;
 
     const queryResponse = await anthropic.messages.create({
@@ -293,8 +493,20 @@ Guidelines:
       if (sq.sourceType === 'reddit' && sourceTypes.includes('reddit')) {
         searchPromises.push(searchReddit(sq.query));
       }
-      if (sq.sourceType === 'pubmed' && sourceTypes.includes('pubmed')) {
-        searchPromises.push(searchPubMed(sq.query));
+      if (sq.sourceType === 'research' && sourceTypes.includes('research')) {
+        searchPromises.push(searchResearch(sq.query));
+      }
+      if (sq.sourceType === 'sciencedaily' && sourceTypes.includes('sciencedaily')) {
+        searchPromises.push(searchScienceDaily(sq.query));
+      }
+      if (sq.sourceType === 'scholar' && sourceTypes.includes('scholar')) {
+        searchPromises.push(searchGoogleScholar(sq.query));
+      }
+      if (sq.sourceType === 'arxiv' && sourceTypes.includes('arxiv')) {
+        searchPromises.push(searchArxiv(sq.query));
+      }
+      if (sq.sourceType === 'preprint' && sourceTypes.includes('preprint')) {
+        searchPromises.push(searchPreprints(sq.query));
       }
     }
 

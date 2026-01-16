@@ -13,7 +13,8 @@ import {
   Session,
   Claim,
   Hook,
-  SourceCategory
+  SourceCategory,
+  SavedProductURL
 } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
@@ -67,6 +68,11 @@ interface AppContextType {
   setFilterAngleType: (type: string | null) => void;
   sortResultsBy: 'virality' | 'source' | 'bridge';
   setSortResultsBy: (sort: 'virality' | 'source' | 'bridge') => void;
+
+  // Saved Product URLs
+  savedProductURLs: SavedProductURL[];
+  addSavedProductURL: (url: SavedProductURL) => void;
+  removeSavedProductURL: (urlId: string) => void;
 }
 
 const initialWizardState: WizardState = {
@@ -98,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [resultsView, setResultsView] = useState<'claims' | 'hooks' | 'favorites'>('hooks');
   const [filterAngleType, setFilterAngleType] = useState<string | null>(null);
   const [sortResultsBy, setSortResultsBy] = useState<'virality' | 'source' | 'bridge'>('virality');
+  const [savedProductURLs, setSavedProductURLs] = useLocalStorage<SavedProductURL[]>('angle-finder-saved-urls', []);
 
   // Wizard actions
   const setStep = useCallback((step: number) => {
@@ -337,6 +344,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   }, [setCustomCategories]);
 
+  // Saved Product URLs
+  const addSavedProductURL = useCallback((url: SavedProductURL) => {
+    setSavedProductURLs(prev => {
+      // Remove if already exists (to move to top)
+      const filtered = prev.filter(u => u.url !== url.url);
+      // Limit to 10 saved URLs
+      return [url, ...filtered].slice(0, 10);
+    });
+  }, [setSavedProductURLs]);
+
+  const removeSavedProductURL = useCallback((urlId: string) => {
+    setSavedProductURLs(prev => prev.filter(u => u.id !== urlId));
+  }, [setSavedProductURLs]);
+
   return (
     <AppContext.Provider
       value={{
@@ -380,6 +401,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setFilterAngleType,
         sortResultsBy,
         setSortResultsBy,
+        savedProductURLs,
+        addSavedProductURL,
+        removeSavedProductURL,
       }}
     >
       {children}

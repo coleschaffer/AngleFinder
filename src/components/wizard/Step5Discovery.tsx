@@ -20,6 +20,10 @@ import {
   ChevronUp,
   Clock,
   X,
+  Newspaper,
+  GraduationCap,
+  FileText,
+  FlaskConical,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
@@ -27,14 +31,22 @@ const sourceTypeLabels: Record<SourceType, string> = {
   youtube: 'YouTube',
   podcast: 'Podcasts',
   reddit: 'Reddit',
-  pubmed: 'PubMed',
+  research: 'Research',
+  sciencedaily: 'ScienceDaily',
+  scholar: 'Scholar',
+  arxiv: 'arXiv',
+  preprint: 'Preprints',
 };
 
 const sourceIcons: Record<SourceType, typeof Youtube> = {
   youtube: Youtube,
   podcast: Radio,
   reddit: MessageSquare,
-  pubmed: BookOpen,
+  research: BookOpen,
+  sciencedaily: Newspaper,
+  scholar: GraduationCap,
+  arxiv: FileText,
+  preprint: FlaskConical,
 };
 
 export function Step5Discovery() {
@@ -344,7 +356,7 @@ export function Step5Discovery() {
                             ? 'Podcast'
                             : source.type === 'reddit'
                             ? `r/${source.subreddit}`
-                            : 'PubMed'}
+                            : sourceTypeLabels[source.type]}
                         </span>
                         {viewCount && (
                           <span className="text-xs text-[var(--ca-gray-light)]">

@@ -15,7 +15,15 @@ export type Niche =
 
 export type SourceStrategy = 'translocate' | 'direct';
 
-export type SourceType = 'youtube' | 'podcast' | 'reddit' | 'pubmed';
+export type SourceType =
+  | 'youtube'
+  | 'podcast'
+  | 'reddit'
+  | 'research'      // Renamed from pubmed - combines PubMed + NIH ODS + NCBI
+  | 'sciencedaily'
+  | 'scholar'       // Google Scholar via SerpApi
+  | 'arxiv'
+  | 'preprint';     // bioRxiv + medRxiv
 
 export type SortBy = 'views' | 'engagement';
 
@@ -47,8 +55,20 @@ export interface Source {
   author?: string;
   publishDate?: string;
   duration?: string;
+  abstract?: string;      // For academic sources (arXiv, preprints, scholar)
+  snippet?: string;       // Short description/excerpt
   failed?: boolean;
   failureReason?: string;
+}
+
+export interface SavedProductURL {
+  id: string;
+  url: string;
+  productName: string;
+  detectedNiche: Niche;
+  customNiche: string;
+  productDescription: string;
+  lastUsed: string;
 }
 
 export interface Claim {
