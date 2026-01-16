@@ -134,14 +134,14 @@ export function ProductURLInput() {
         <div className="border-t border-[var(--ca-gray-dark)] pt-3 mt-3">
           <button
             onClick={() => setShowSaved(!showSaved)}
-            className="flex items-center justify-center gap-2 text-sm text-[var(--ca-gray-light)] hover:text-[var(--ca-gold)] transition-colors w-full"
+            className="flex items-center gap-2 text-sm text-[var(--ca-gray-light)] hover:text-[var(--ca-gold)] transition-colors w-full"
           >
             <Clock className="w-4 h-4" />
             <span>Recent Products ({savedProductURLs.length})</span>
             {showSaved ? (
-              <ChevronUp className="w-4 h-4" />
+              <ChevronUp className="w-4 h-4 ml-auto" />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-4 h-4 ml-auto" />
             )}
           </button>
 
