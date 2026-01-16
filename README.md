@@ -30,6 +30,8 @@ Angle Finder is an AI-powered tool that helps marketers and copywriters discover
 
 - **Session Management**: Auto-save history, favorites, and markdown export
 
+- **Mobile-Optimized**: Fully responsive design with touch-friendly interface
+
 ## Getting Started
 
 ### Prerequisites
