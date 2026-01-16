@@ -120,11 +120,11 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
   return (
     <div className="card animate-slide-up cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
+      <div className="flex items-start justify-between gap-3 mb-3 sm:mb-4">
+        <div className="flex-1 min-w-0">
           <p className="font-medium text-sm">{claim.claim}</p>
         </div>
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <div className={`score-badge ${getScoreClass(claim.surpriseScore)}`}>
             {claim.surpriseScore}
           </div>
@@ -212,7 +212,7 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
               onClick={handleCopy}
               className="btn btn-secondary text-sm flex-1"

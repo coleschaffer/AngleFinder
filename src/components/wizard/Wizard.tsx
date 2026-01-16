@@ -37,7 +37,7 @@ export function Wizard() {
   };
 
   return (
-    <div className="flex-1 p-6 md:p-8">
+    <div className="flex-1 p-4 sm:p-6 md:p-8">
       {/* Step Indicator - hide on analysis and results */}
       {wizard.step < 6 && (
         <StepIndicator

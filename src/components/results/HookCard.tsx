@@ -141,14 +141,14 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
   return (
     <div className="card animate-slide-up cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="font-semibold text-base leading-tight">{hook.headline}</h3>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm sm:text-base leading-tight">{hook.headline}</h3>
           {hook.isVariation && (
             <span className="text-xs text-[var(--ca-gold)] mt-1 block">Generated Variation</span>
           )}
         </div>
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <div className={`score-badge ${getScoreClass(hook.viralityScore.total)}`}>
             {hook.viralityScore.total}
           </div>
@@ -166,7 +166,7 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
       </div>
 
       {/* Tags */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
         <span className="tag">
           <Icon className="w-3 h-3" />
           {sourceType === 'youtube' ? 'YouTube'
@@ -209,7 +209,7 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="space-y-6 pt-4 border-t border-[var(--ca-gray-dark)] animate-fade-in" onClick={(e) => e.stopPropagation()}>
+        <div className="space-y-4 sm:space-y-6 pt-4 border-t border-[var(--ca-gray-dark)] animate-fade-in" onClick={(e) => e.stopPropagation()}>
           {/* Source Claim */}
           <div>
             <h4 className="text-xs font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-2">
