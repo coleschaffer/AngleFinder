@@ -119,102 +119,98 @@ export function Sidebar() {
     }
   };
 
-  // Feedback Modal - rendered outside sidebar to avoid transform issues
-  const FeedbackModal = () => {
-    if (!showFeedback) return null;
-
-    return (
+  // Feedback Modal JSX - inlined to prevent remounting on state changes
+  const feedbackModalContent = showFeedback && (
+    <div
+      className="fixed inset-0 feedback-backdrop flex items-start sm:items-center justify-center z-[100] p-4 pt-16 sm:pt-4 overflow-y-auto"
+      onClick={() => setShowFeedback(false)}
+    >
       <div
-        className="fixed inset-0 feedback-backdrop flex items-start sm:items-center justify-center z-[100] p-4 pt-16 sm:pt-4 overflow-y-auto"
-        onClick={() => setShowFeedback(false)}
+        className="feedback-modal w-full max-w-md sm:max-w-lg bg-gradient-to-b from-[var(--ca-dark)] to-[var(--ca-black)] border border-[var(--ca-gray-dark)] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden mb-[50vh] sm:mb-0 sm:my-0 flex-shrink-0"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="feedback-modal w-full max-w-md sm:max-w-lg bg-gradient-to-b from-[var(--ca-dark)] to-[var(--ca-black)] border border-[var(--ca-gray-dark)] rounded-2xl shadow-2xl shadow-black/50 overflow-hidden mb-[50vh] sm:mb-0 sm:my-0 flex-shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {feedbackSent ? (
-            /* Success State */
-            <div className="py-10 sm:py-12 px-6 sm:px-8">
-              <div className="flex flex-col items-center">
-                <div className="success-circle w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[var(--ca-gold)] flex items-center justify-center">
-                  <svg className="w-7 h-7 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none">
-                    <path
-                      className="success-check"
-                      d="M5 13l4 4L19 7"
-                      stroke="var(--ca-black)"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
+        {feedbackSent ? (
+          /* Success State */
+          <div className="py-10 sm:py-12 px-6 sm:px-8">
+            <div className="flex flex-col items-center">
+              <div className="success-circle w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[var(--ca-gold)] flex items-center justify-center">
+                <svg className="w-7 h-7 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none">
+                  <path
+                    className="success-check"
+                    d="M5 13l4 4L19 7"
+                    stroke="var(--ca-black)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
 
-                <h3 className="text-lg sm:text-xl font-bold mt-4 mb-2">
-                  Thank You!
-                </h3>
-                <p className="text-[var(--ca-gray-light)] text-center text-sm">
-                  Your feedback has been submitted.
-                </p>
+              <h3 className="text-lg sm:text-xl font-bold mt-4 mb-2">
+                Thank You!
+              </h3>
+              <p className="text-[var(--ca-gray-light)] text-center text-sm">
+                Your feedback has been submitted.
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* Form State */
+          <>
+            {/* Header */}
+            <div className="relative px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
+              <div className="flex items-start justify-between">
+                <h3 className="text-lg sm:text-xl font-semibold">Send Feedback</h3>
+                <button
+                  onClick={() => setShowFeedback(false)}
+                  className="p-2 rounded-lg hover:bg-[var(--ca-gray-dark)] transition-colors group"
+                >
+                  <X className="w-5 h-5 text-[var(--ca-gray)] group-hover:text-white transition-colors" />
+                </button>
               </div>
             </div>
-          ) : (
-            /* Form State */
-            <>
-              {/* Header */}
-              <div className="relative px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
-                <div className="flex items-start justify-between">
-                  <h3 className="text-lg sm:text-xl font-semibold">Send Feedback</h3>
-                  <button
-                    onClick={() => setShowFeedback(false)}
-                    className="p-2 rounded-lg hover:bg-[var(--ca-gray-dark)] transition-colors group"
-                  >
-                    <X className="w-5 h-5 text-[var(--ca-gray)] group-hover:text-white transition-colors" />
-                  </button>
-                </div>
-              </div>
 
-              {/* Body */}
-              <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-3 sm:space-y-4">
-                <input
-                  type="email"
-                  value={feedbackEmail}
-                  onChange={(e) => setFeedbackEmail(e.target.value)}
-                  placeholder="Your email"
-                  className="input"
+            {/* Body */}
+            <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-3 sm:space-y-4">
+              <input
+                type="email"
+                value={feedbackEmail}
+                onChange={(e) => setFeedbackEmail(e.target.value)}
+                placeholder="Your email"
+                className="input"
+              />
+              <div className="relative">
+                <textarea
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  placeholder="Share your thoughts, suggestions, or report issues..."
+                  className="feedback-textarea w-full min-h-[100px] sm:min-h-[120px] p-3 sm:p-4 bg-[var(--ca-gray-dark)] border border-[var(--ca-gray)] rounded-lg text-white placeholder:text-[var(--ca-gray-light)] resize-none transition-all duration-200 focus:outline-none"
                 />
-                <div className="relative">
-                  <textarea
-                    value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value)}
-                    placeholder="Share your thoughts, suggestions, or report issues..."
-                    className="feedback-textarea w-full min-h-[100px] sm:min-h-[120px] p-3 sm:p-4 bg-[var(--ca-gray-dark)] border border-[var(--ca-gray)] rounded-lg text-white placeholder:text-[var(--ca-gray-light)] resize-none transition-all duration-200 focus:outline-none"
-                  />
-                </div>
-
-                {/* Footer */}
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
-                  <button
-                    onClick={() => setShowFeedback(false)}
-                    className="btn btn-ghost"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmitFeedback}
-                    disabled={!feedbackText.trim() || !feedbackEmail.trim()}
-                    className="btn btn-primary"
-                  >
-                    <Send className="w-4 h-4" />
-                    Send
-                  </button>
-                </div>
               </div>
-            </>
-          )}
-        </div>
+
+              {/* Footer */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
+                <button
+                  onClick={() => setShowFeedback(false)}
+                  className="btn btn-ghost"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitFeedback}
+                  disabled={!feedbackText.trim() || !feedbackEmail.trim()}
+                  className="btn btn-primary"
+                >
+                  <Send className="w-4 h-4" />
+                  Send
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
 
   // Sidebar content (shared between mobile and desktop)
   const SidebarContent = () => (
@@ -400,7 +396,7 @@ export function Sidebar() {
         </div>
 
         {/* Feedback Modal - rendered outside drawer */}
-        <FeedbackModal />
+        {feedbackModalContent}
       </>
     );
   }
@@ -431,7 +427,7 @@ export function Sidebar() {
       </div>
 
       {/* Feedback Modal - rendered outside sidebar */}
-      <FeedbackModal />
+      {feedbackModalContent}
     </>
   );
 }
