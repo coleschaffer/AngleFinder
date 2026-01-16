@@ -82,8 +82,8 @@ async function searchYouTube(query: string, isPodcast: boolean = false): Promise
   }
 }
 
-// Reddit API search
-async function searchReddit(query: string): Promise<Source[]> {
+// Reddit API search - optionally within specific subreddits
+async function searchReddit(query: string, subreddits?: string[]): Promise<Source[]> {
   const clientId = process.env.REDDIT_CLIENT_ID;
   const clientSecret = process.env.REDDIT_CLIENT_SECRET;
 
@@ -107,16 +107,22 @@ async function searchReddit(query: string): Promise<Source[]> {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // Search posts - sort by relevance
-    const searchResponse = await fetch(
-      `https://oauth.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&limit=10`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'User-Agent': 'AngleFinder/1.0',
-        },
-      }
-    );
+    // Build search URL - if subreddits provided, search within them
+    let searchUrl: string;
+    if (subreddits && subreddits.length > 0) {
+      const subredditPath = subreddits.slice(0, 10).join('+'); // Max 10 subreddits
+      searchUrl = `https://oauth.reddit.com/r/${subredditPath}/search.json?q=${encodeURIComponent(query)}&restrict_sr=true&sort=relevance&limit=15`;
+      console.log(`Searching Reddit in subreddits: ${subredditPath}`);
+    } else {
+      searchUrl = `https://oauth.reddit.com/search.json?q=${encodeURIComponent(query)}&sort=relevance&limit=10`;
+    }
+
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'User-Agent': 'AngleFinder/1.0',
+      },
+    });
 
     if (!searchResponse.ok) throw new Error('Reddit search failed');
     const searchData = await searchResponse.json();
@@ -451,6 +457,43 @@ export async function POST(request: NextRequest) {
     const body: DiscoverRequest = await request.json();
     const { niche, product, strategy, categories, sourceTypes, page } = body;
 
+    // If Reddit is selected, get targeted subreddits from Claude
+    let targetSubreddits: string[] = [];
+    if (sourceTypes.includes('reddit')) {
+      const subredditPrompt = `Suggest 8-12 relevant subreddits for finding interesting discussions and insights about:
+
+Niche: ${niche}
+Product: ${product}
+Topics: ${categories.join(', ')}
+Strategy: ${strategy === 'translocate' ? 'Looking for unexpected connections from unrelated fields' : 'Looking for direct, evidence-based content'}
+
+Return ONLY a JSON array of subreddit names (without r/ prefix), like: ["nutrition", "science", "askscience"]
+
+Focus on:
+- Active communities with quality discussions
+- Mix of niche-specific and broader science/research subreddits
+- ${strategy === 'translocate' ? 'Include subreddits from tangentially related or surprising fields' : 'Focus on subreddits directly about this topic'}
+- Avoid meme/low-quality subreddits`;
+
+      try {
+        const subredditResponse = await anthropic.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 256,
+          messages: [{ role: 'user', content: subredditPrompt }],
+        });
+
+        const subredditText = subredditResponse.content[0].type === 'text' ? subredditResponse.content[0].text : '';
+        const subredditMatch = subredditText.match(/\[[\s\S]*?\]/);
+        if (subredditMatch) {
+          targetSubreddits = JSON.parse(subredditMatch[0]);
+          console.log('Target subreddits:', targetSubreddits);
+        }
+      } catch (e) {
+        console.error('Failed to get subreddits:', e);
+        // Will fall back to site-wide search
+      }
+    }
+
     // Use Claude to generate optimal search queries
     const queryPrompt = `Generate ${Math.max(sourceTypes.length * 2, 4)} specific search queries to find content about these topics.
 
@@ -513,7 +556,7 @@ Guidelines:
         searchPromises.push(searchYouTube(sq.query, true));
       }
       if (sq.sourceType === 'reddit' && sourceTypes.includes('reddit')) {
-        searchPromises.push(searchReddit(sq.query));
+        searchPromises.push(searchReddit(sq.query, targetSubreddits));
       }
       if (sq.sourceType === 'research' && sourceTypes.includes('research')) {
         searchPromises.push(searchResearch(sq.query));
