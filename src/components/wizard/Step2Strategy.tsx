@@ -60,7 +60,7 @@ export function Step2Strategy() {
               onClick={() => setStrategy(strategy.id)}
               className={`card card-hover text-left transition-all ${
                 isSelected
-                  ? 'border-[var(--ca-gold)] shadow-[0_0_20px_rgba(212,175,55,0.1)]'
+                  ? 'border-[var(--ca-gold)]'
                   : ''
               }`}
             >
