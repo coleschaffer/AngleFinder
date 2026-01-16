@@ -79,7 +79,6 @@ export function Step7Results() {
     currentSession,
     deleteSession,
     generatedHooks,
-    removeGeneratedHook,
     customCategories,
   } = useApp();
 
@@ -191,6 +190,10 @@ export function Step7Results() {
   const favoriteHookItems = useMemo(() => {
     return allHooks.filter(h => favoriteHooks.includes(h.id));
   }, [allHooks, favoriteHooks]);
+
+  const favoriteGeneratedItems = useMemo(() => {
+    return generatedHooks.filter(h => favoriteHooks.includes(h.id));
+  }, [generatedHooks, favoriteHooks]);
 
   // Export functions
   const exportToMarkdown = (type: 'claims' | 'hooks' | 'all' | 'favorites' | 'generated') => {
@@ -313,7 +316,7 @@ export function Step7Results() {
           {currentSession && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="btn btn-ghost text-[var(--ca-gray-light)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              className="btn btn-ghost text-[var(--ca-gray-light)] hover:text-red-400 hover:bg-red-500/20 transition-colors"
               title="Delete this session"
             >
               <Trash2 className="w-4 h-4" />
@@ -475,7 +478,7 @@ export function Step7Results() {
             }`}
           >
             <Star className="w-4 h-4" />
-            Favorites ({favoriteClaimItems.length + favoriteHookItems.length})
+            Favorites ({favoriteClaimItems.length + favoriteHookItems.length + favoriteGeneratedItems.length})
           </button>
         </div>
         <button
@@ -622,21 +625,13 @@ export function Step7Results() {
             ) : (
               <div className="space-y-4">
                 {generatedHooks.map(hook => (
-                  <div key={hook.id} className="relative group">
-                    <HookCard
-                      hook={hook}
-                      sourceName={hook.sourceName || 'Unknown Source'}
-                      sourceType={hook.sourceType || 'research'}
-                      sourceUrl={hook.sourceUrl || '#'}
-                    />
-                    <button
-                      onClick={() => removeGeneratedHook(hook.id)}
-                      className="absolute top-4 right-16 p-2 rounded-lg opacity-0 group-hover:opacity-100 bg-[var(--ca-gray-dark)] hover:bg-red-500/20 text-[var(--ca-gray-light)] hover:text-red-400 transition-all"
-                      title="Remove generated hook"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <HookCard
+                    key={hook.id}
+                    hook={hook}
+                    sourceName={hook.sourceName || 'Unknown Source'}
+                    sourceType={hook.sourceType || 'research'}
+                    sourceUrl={hook.sourceUrl || '#'}
+                  />
                 ))}
               </div>
             )}
@@ -645,7 +640,7 @@ export function Step7Results() {
 
         {resultsView === 'favorites' && (
           <>
-            {favoriteClaimItems.length === 0 && favoriteHookItems.length === 0 ? (
+            {favoriteClaimItems.length === 0 && favoriteHookItems.length === 0 && favoriteGeneratedItems.length === 0 ? (
               <p className="text-center text-[var(--ca-gray-light)] py-12">
                 No favorites yet. Star claims and hooks to save them here.
               </p>
@@ -665,6 +660,25 @@ export function Step7Results() {
                           sourceName={hook.sourceName}
                           sourceType={hook.sourceType}
                           sourceUrl={hook.sourceUrl}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {favoriteGeneratedItems.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-[var(--ca-gold)]" />
+                      Favorite Generated ({favoriteGeneratedItems.length})
+                    </h3>
+                    <div className="space-y-4">
+                      {favoriteGeneratedItems.map(hook => (
+                        <HookCard
+                          key={hook.id}
+                          hook={hook}
+                          sourceName={hook.sourceName || 'Unknown Source'}
+                          sourceType={hook.sourceType || 'research'}
+                          sourceUrl={hook.sourceUrl || '#'}
                         />
                       ))}
                     </div>

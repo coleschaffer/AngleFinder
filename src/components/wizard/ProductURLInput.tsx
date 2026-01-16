@@ -4,11 +4,10 @@ import { useApp } from '@/context/AppContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SavedProductURL } from '@/types';
 import { Link2, Loader2, ChevronDown, ChevronUp, Trash2, Clock, Download } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function ProductURLInput() {
   const {
-    wizard,
     setNiche,
     setCustomNiche,
     setProductDescription,
@@ -23,15 +22,6 @@ export function ProductURLInput() {
   const [savedExpandedState, setSavedExpandedState] = useLocalStorage<boolean>('angle-finder-recent-products-expanded', true);
   const [showSaved, setShowSaved] = useState(savedExpandedState);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-
-  // Start expanded on step 1, otherwise use saved state
-  useEffect(() => {
-    if (wizard.step === 1) {
-      setShowSaved(true);
-    } else {
-      setShowSaved(savedExpandedState);
-    }
-  }, [wizard.step, savedExpandedState]);
 
   // Save expanded state to localStorage when changed
   const toggleShowSaved = () => {
@@ -150,7 +140,7 @@ export function ProductURLInput() {
 
       {/* Recent Products */}
       {savedProductURLs.length > 0 && (
-        <div className="border-t border-[var(--ca-gray-dark)] pt-3 mt-3">
+        <div className="border-t border-[var(--ca-gray-dark)] pt-2 mt-3">
           <button
             onClick={toggleShowSaved}
             className="flex items-center gap-2 text-sm text-[var(--ca-gray-light)] hover:text-[var(--ca-gold)] transition-colors w-full"
@@ -165,28 +155,27 @@ export function ProductURLInput() {
           </button>
 
           {showSaved && (
-            <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+            <div className="mt-2 flex flex-wrap gap-2">
               {savedProductURLs.map((saved) => (
                 <div
                   key={saved.id}
-                  className="flex items-center gap-3 p-2 rounded-lg bg-[var(--ca-gray-dark)]/50 hover:bg-[var(--ca-gray-dark)] transition-colors group"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ca-gray-dark)]/50 hover:bg-[var(--ca-gray-dark)] transition-colors group"
                 >
                   <button
                     onClick={() => handleSelectSaved(saved)}
-                    className="flex-1 text-left min-w-0"
+                    className="text-sm font-medium truncate max-w-[200px]"
                   >
-                    <p className="text-sm font-medium truncate">{saved.productName}</p>
-                    <p className="text-xs text-[var(--ca-gray-light)] truncate">{saved.url}</p>
+                    {saved.productName}
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleteConfirmId(saved.id);
                     }}
-                    className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-[var(--ca-gray-light)] hover:text-red-400 transition-all"
+                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-[var(--ca-gray-light)] hover:text-red-400 transition-all"
                     title="Remove"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               ))}
