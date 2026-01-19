@@ -155,8 +155,7 @@ export function Step6Analysis() {
 
       // Rolling concurrent pool - maintains N active tasks at all times
       // As each completes, immediately starts the next one
-      // Reduced from 20 to 3 to avoid hitting Anthropic rate limits
-      const concurrencyLimit = 3;
+      const concurrencyLimit = 6;
       const queue = [...needsAnalysis];
       const activeIds = new Set<string>();
       const executing = new Map<string, Promise<void>>();

@@ -87,7 +87,7 @@ export function Step5Discovery() {
   // Background analysis queue and concurrency control
   const backgroundQueue = useRef<Source[]>([]);
   const activeBackgroundCount = useRef(0);
-  const BACKGROUND_CONCURRENCY_LIMIT = 2; // Max parallel background analyses
+  const BACKGROUND_CONCURRENCY_LIMIT = 6; // Max parallel background analyses
 
   const getCategoryNames = () => {
     if (!wizard.niche || !wizard.strategy) return [];
