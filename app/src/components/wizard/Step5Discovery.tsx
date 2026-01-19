@@ -84,6 +84,10 @@ export function Step5Discovery() {
   const selectionDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   // Track previous selections to detect changes
   const previousSelections = useRef<Set<string>>(new Set());
+  // Background analysis queue and concurrency control
+  const backgroundQueue = useRef<Source[]>([]);
+  const activeBackgroundCount = useRef(0);
+  const BACKGROUND_CONCURRENCY_LIMIT = 2; // Max parallel background analyses
 
   const getCategoryNames = () => {
     if (!wizard.niche || !wizard.strategy) return [];
@@ -98,50 +102,81 @@ export function Step5Discovery() {
     return NICHES.find(n => n.id === wizard.niche)?.name || '';
   };
 
-  // Background analysis function
-  const analyzeSourceInBackground = useCallback(async (source: Source) => {
-    // Don't re-analyze if already done or in progress
-    if (preAnalyzedResults.has(source.id) || pendingAnalysis.has(source.id)) {
-      return;
-    }
+  // Process background queue - runs the actual analysis
+  const processBackgroundQueue = useCallback(async () => {
+    // If we're at capacity or queue is empty, do nothing
+    while (activeBackgroundCount.current < BACKGROUND_CONCURRENCY_LIMIT && backgroundQueue.current.length > 0) {
+      const source = backgroundQueue.current.shift();
+      if (!source) break;
 
-    const controller = new AbortController();
-    abortControllers.current.set(source.id, controller);
-    addPendingAnalysis(source.id);
-
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source,
-          niche: getNicheName(),
-          product: wizard.productDescription,
-          strategy: wizard.strategy,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error('Analysis failed');
+      // Skip if already analyzed or in progress
+      if (preAnalyzedResults.has(source.id) || pendingAnalysis.has(source.id)) {
+        continue;
       }
 
-      const result: AnalysisResult = await response.json();
-      addPreAnalyzedResult(source.id, result);
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.log(`Analysis cancelled for source: ${source.id}`);
-      } else {
-        console.error('Background analysis error:', error);
-      }
-    } finally {
-      removePendingAnalysis(source.id);
-      abortControllers.current.delete(source.id);
+      activeBackgroundCount.current++;
+      const controller = new AbortController();
+      abortControllers.current.set(source.id, controller);
+      addPendingAnalysis(source.id);
+
+      // Start the analysis (don't await - let it run in parallel)
+      (async () => {
+        try {
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              source,
+              niche: getNicheName(),
+              product: wizard.productDescription,
+              strategy: wizard.strategy,
+            }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok) {
+            throw new Error('Analysis failed');
+          }
+
+          const result: AnalysisResult = await response.json();
+          addPreAnalyzedResult(source.id, result);
+        } catch (error: any) {
+          if (error.name === 'AbortError') {
+            console.log(`Analysis cancelled for source: ${source.id}`);
+          } else {
+            console.error('Background analysis error:', error);
+          }
+        } finally {
+          removePendingAnalysis(source.id);
+          abortControllers.current.delete(source.id);
+          activeBackgroundCount.current--;
+          // Process next item in queue
+          processBackgroundQueue();
+        }
+      })();
     }
   }, [wizard.productDescription, wizard.strategy, preAnalyzedResults, pendingAnalysis, addPendingAnalysis, removePendingAnalysis, addPreAnalyzedResult]);
 
+  // Queue a source for background analysis
+  const queueBackgroundAnalysis = useCallback((source: Source) => {
+    // Don't queue if already done, in progress, or already in queue
+    if (preAnalyzedResults.has(source.id) || pendingAnalysis.has(source.id)) {
+      return;
+    }
+    if (backgroundQueue.current.some(s => s.id === source.id)) {
+      return;
+    }
+
+    backgroundQueue.current.push(source);
+    processBackgroundQueue();
+  }, [preAnalyzedResults, pendingAnalysis, processBackgroundQueue]);
+
   // Cancel analysis for a source
   const cancelAnalysis = useCallback((sourceId: string) => {
+    // Remove from queue if queued
+    backgroundQueue.current = backgroundQueue.current.filter(s => s.id !== sourceId);
+
+    // Abort if in progress
     const controller = abortControllers.current.get(sourceId);
     if (controller) {
       controller.abort();
@@ -175,11 +210,11 @@ export function Step5Discovery() {
         cancelAnalysis(sourceId);
       }
 
-      // Start analysis for newly selected sources
+      // Queue analysis for newly selected sources
       for (const sourceId of newlySelected) {
         const source = wizard.discoveredSources.find(s => s.id === sourceId);
         if (source && !source.failed) {
-          analyzeSourceInBackground(source);
+          queueBackgroundAnalysis(source);
         }
       }
     }, 500); // 500ms debounce
@@ -189,7 +224,7 @@ export function Step5Discovery() {
         clearTimeout(selectionDebounceTimer.current);
       }
     };
-  }, [wizard.selectedSources, wizard.discoveredSources, analyzeSourceInBackground, cancelAnalysis]);
+  }, [wizard.selectedSources, wizard.discoveredSources, queueBackgroundAnalysis, cancelAnalysis]);
 
   // Cleanup on unmount
   useEffect(() => {
