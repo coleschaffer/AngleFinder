@@ -95,11 +95,15 @@ export function Step7Results() {
 
   const [showFilters, setShowFilters] = useState(false);
   const [showAwarenessFilter, setShowAwarenessFilter] = useState(false);
+  const [showBridgeFilter, setShowBridgeFilter] = useState(false);
+  const [showSourceFilter, setShowSourceFilter] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showInputsSummary, setShowInputsSummary] = useState(true);
-  const [sortClaimsBy, setSortClaimsBy] = useState<'surprise' | 'source' | 'momentum'>('surprise');
+  const [sortClaimsBy, setSortClaimsBy] = useState<'surprise' | 'momentum'>('surprise');
   const [filterAwareness, setFilterAwareness] = useState<AwarenessLevel | 'sweet-spot' | null>(null);
+  const [filterBridge, setFilterBridge] = useState<'Aggressive' | 'Moderate' | 'Conservative' | null>(null);
+  const [filterSource, setFilterSource] = useState<string | null>(null);
 
   // Auto-save session on first load of results (only for new sessions)
   useEffect(() => {
@@ -162,6 +166,17 @@ export function Step7Results() {
     );
   }, [wizard.results]);
 
+  // Get unique sources for claims filter
+  const uniqueSources = useMemo(() => {
+    const sources = new Map<string, { name: string; type: SourceType }>();
+    allClaims.forEach(claim => {
+      if (!sources.has(claim.sourceName)) {
+        sources.set(claim.sourceName, { name: claim.sourceName, type: claim.sourceType });
+      }
+    });
+    return Array.from(sources.values());
+  }, [allClaims]);
+
   // Filter and sort claims
   const sortedClaims = useMemo(() => {
     let claims = [...allClaims];
@@ -173,6 +188,11 @@ export function Step7Results() {
       claims = claims.filter(c => c.awarenessLevel === filterAwareness);
     }
 
+    // Filter by source
+    if (filterSource) {
+      claims = claims.filter(c => c.sourceName === filterSource);
+    }
+
     // Sort
     if (sortClaimsBy === 'surprise') {
       return claims.sort((a, b) => b.surpriseScore - a.surpriseScore);
@@ -180,11 +200,10 @@ export function Step7Results() {
     if (sortClaimsBy === 'momentum') {
       return claims.sort((a, b) => (b.momentumScore || 0) - (a.momentumScore || 0));
     }
-    // Sort by source - keep original order (grouped by source)
     return claims;
-  }, [allClaims, sortClaimsBy, filterAwareness]);
+  }, [allClaims, sortClaimsBy, filterAwareness, filterSource]);
 
-  // Filter hooks by angle type and awareness level
+  // Filter hooks by angle type, awareness level, and bridge distance
   const filteredHooks = useMemo(() => {
     let hooks = allHooks;
 
@@ -200,8 +219,13 @@ export function Step7Results() {
       hooks = hooks.filter(h => h.awarenessLevel === filterAwareness);
     }
 
+    // Filter by bridge distance
+    if (filterBridge) {
+      hooks = hooks.filter(h => h.bridgeDistance === filterBridge);
+    }
+
     return hooks;
-  }, [allHooks, filterAngleType, filterAwareness]);
+  }, [allHooks, filterAngleType, filterAwareness, filterBridge]);
 
   // Sort hooks
   const bridgeDistanceOrder = { 'Aggressive': 0, 'Moderate': 1, 'Conservative': 2 };
@@ -216,7 +240,6 @@ export function Step7Results() {
     if (sortResultsBy === 'momentum') {
       return hooks.sort((a, b) => (b.momentumScore || 0) - (a.momentumScore || 0));
     }
-    // Sort by source - group by sourceId
     return hooks;
   }, [filteredHooks, sortResultsBy]);
 
@@ -661,18 +684,58 @@ export function Step7Results() {
             )}
           </div>
 
+          {/* Bridge Filter */}
+          <div className="relative">
+            <button
+              onClick={() => setShowBridgeFilter(!showBridgeFilter)}
+              className={`btn btn-secondary text-sm ${filterBridge ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
+            >
+              <Shuffle className="w-4 h-4" />
+              {filterBridge || 'All Bridges'}
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {showBridgeFilter && (
+              <div className="absolute top-full left-0 mt-2 w-48 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1">
+                <button
+                  onClick={() => {
+                    setFilterBridge(null);
+                    setShowBridgeFilter(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
+                    !filterBridge ? 'text-[var(--ca-gold)]' : ''
+                  }`}
+                >
+                  All Bridges
+                </button>
+                {(['Aggressive', 'Moderate', 'Conservative'] as const).map(bridge => (
+                  <button
+                    key={bridge}
+                    onClick={() => {
+                      setFilterBridge(bridge);
+                      setShowBridgeFilter(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
+                      filterBridge === bridge ? 'text-[var(--ca-gold)]' : ''
+                    }`}
+                  >
+                    {bridge}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Sort Toggle */}
           <button
             onClick={() => {
               if (sortResultsBy === 'virality') setSortResultsBy('momentum');
               else if (sortResultsBy === 'momentum') setSortResultsBy('bridge');
-              else if (sortResultsBy === 'bridge') setSortResultsBy('source');
               else setSortResultsBy('virality');
             }}
             className="btn btn-secondary text-sm"
           >
             <ArrowUpDown className="w-4 h-4" />
-            Sort: {sortResultsBy === 'virality' ? 'Virality' : sortResultsBy === 'momentum' ? 'Momentum' : sortResultsBy === 'bridge' ? 'Bridge' : 'By Source'}
+            Sort: {sortResultsBy === 'virality' ? 'Virality' : sortResultsBy === 'momentum' ? 'Momentum' : 'Bridge'}
           </button>
         </div>
       )}
@@ -747,17 +810,65 @@ export function Step7Results() {
             )}
           </div>
 
+          {/* Source Filter */}
+          <div className="relative">
+            <button
+              onClick={() => setShowSourceFilter(!showSourceFilter)}
+              className={`btn btn-secondary text-sm ${filterSource ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
+            >
+              <BookOpen className="w-4 h-4" />
+              {filterSource ? (
+                <span className="max-w-32 truncate">{filterSource}</span>
+              ) : (
+                'All Sources'
+              )}
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {showSourceFilter && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1 max-h-64 overflow-y-auto">
+                <button
+                  onClick={() => {
+                    setFilterSource(null);
+                    setShowSourceFilter(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
+                    !filterSource ? 'text-[var(--ca-gold)]' : ''
+                  }`}
+                >
+                  All Sources
+                </button>
+                {uniqueSources.map(source => {
+                  const Icon = sourceTypeIcons[source.type];
+                  return (
+                    <button
+                      key={source.name}
+                      onClick={() => {
+                        setFilterSource(source.name);
+                        setShowSourceFilter(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
+                        filterSource === source.name ? 'text-[var(--ca-gold)]' : ''
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{source.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Sort Toggle */}
           <button
             onClick={() => {
               if (sortClaimsBy === 'surprise') setSortClaimsBy('momentum');
-              else if (sortClaimsBy === 'momentum') setSortClaimsBy('source');
               else setSortClaimsBy('surprise');
             }}
             className="btn btn-secondary text-sm"
           >
             <ArrowUpDown className="w-4 h-4" />
-            Sort: {sortClaimsBy === 'surprise' ? 'Surprise Score' : sortClaimsBy === 'momentum' ? 'Momentum' : 'By Source'}
+            Sort: {sortClaimsBy === 'surprise' ? 'Surprise Score' : 'Momentum'}
           </button>
         </div>
       )}
