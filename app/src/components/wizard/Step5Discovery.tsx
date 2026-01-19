@@ -65,6 +65,9 @@ export function Step5Discovery() {
     pendingAnalysis,
     addPendingAnalysis,
     removePendingAnalysis,
+    // Ref-based getters for use in async callbacks (avoid stale closure)
+    isPendingAnalysis,
+    getPreAnalyzedResult,
   } = useApp();
 
   const [isSearching, setIsSearching] = useState(false);
@@ -105,14 +108,15 @@ export function Step5Discovery() {
   };
 
   // Process background queue - runs the actual analysis
+  // Uses ref-based getters (isPendingAnalysis, getPreAnalyzedResult) to avoid stale state in async callbacks
   const processBackgroundQueue = useCallback(() => {
     // If we're at capacity or queue is empty, do nothing
     while (activeBackgroundCount.current < BACKGROUND_CONCURRENCY_LIMIT && backgroundQueue.current.length > 0) {
       const source = backgroundQueue.current.shift();
       if (!source) break;
 
-      // Skip if already analyzed or in progress
-      if (preAnalyzedResults.has(source.id) || pendingAnalysis.has(source.id)) {
+      // Skip if already analyzed or in progress (use ref-based getters for current values)
+      if (getPreAnalyzedResult(source.id) || isPendingAnalysis(source.id)) {
         continue;
       }
 
@@ -157,7 +161,7 @@ export function Step5Discovery() {
         }
       })();
     }
-  }, [wizard.productDescription, wizard.strategy, preAnalyzedResults, pendingAnalysis, addPendingAnalysis, removePendingAnalysis, addPreAnalyzedResult]);
+  }, [wizard.productDescription, wizard.strategy, isPendingAnalysis, getPreAnalyzedResult, addPendingAnalysis, removePendingAnalysis, addPreAnalyzedResult]);
 
   // Keep ref updated with latest function
   useEffect(() => {
@@ -166,8 +170,8 @@ export function Step5Discovery() {
 
   // Queue a source for background analysis
   const queueBackgroundAnalysis = useCallback((source: Source) => {
-    // Don't queue if already done, in progress, or already in queue
-    if (preAnalyzedResults.has(source.id) || pendingAnalysis.has(source.id)) {
+    // Don't queue if already done, in progress, or already in queue (use ref-based getters)
+    if (getPreAnalyzedResult(source.id) || isPendingAnalysis(source.id)) {
       return;
     }
     if (backgroundQueue.current.some(s => s.id === source.id)) {
@@ -176,7 +180,7 @@ export function Step5Discovery() {
 
     backgroundQueue.current.push(source);
     processBackgroundQueue();
-  }, [preAnalyzedResults, pendingAnalysis, processBackgroundQueue]);
+  }, [getPreAnalyzedResult, isPendingAnalysis, processBackgroundQueue]);
 
   // Cancel analysis for a source
   const cancelAnalysis = useCallback((sourceId: string) => {
