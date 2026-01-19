@@ -1,0 +1,1004 @@
+
+▗ ▗   ▖ ▖  Claude Code v2.1.7
+           Opus 4.5 · Claude Max
+  ▘▘ ▝▝    ~/Desktop/Stefan Georgi Angle Finder
+
+❯ /interview 
+
+⏺ I'll start by locating and reading the PRD in this project directory.
+
+⏺ Search(pattern: "**/{PRD,prd,SPEC,spec,requirements}*.md")
+  ⎿  Found 0 files 
+
+⏺ Search(pattern: "**/*.md")
+  ⎿  Found 1 file (ctrl+o to expand)
+
+⏺ Found it. Let me read the PRD.
+
+⏺ Read(Angle Finder PRD.md)
+  ⎿  Read 147 lines
+
+⏺ Excellent! I've reviewed the PRD for the Stefan Georgi Angle Finder tool. This is a creative tool for generating DTC ad angles through content research and "translocation" of ideas. Let me start the interview to uncover gaps and clarify requirements.
+                                                                       
+⏺ User answered Claude's questions:
+  ⎿  · What tech stack do you want to use for this tool? → What do you 
+     recommend?
+     · How should users authenticate? → No Auth Required
+     · Where should this tool be deployed/hosted? → Vercel
+
+⏺ Good context. For a tool like this with AI-heavy processing and API integrations, I'd recommend Next.js Full-Stack - it handles the React UI nicely, the API routes can manage your YouTube/Reddit/PubMed calls, and it deploys seamlessly to Vercel. Let me continue probing on the more complex aspects.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · What AI/LLM should power the analysis and hook generation? → Claude 
+     API with Opus 4.5
+     · How should long content (1hr+ podcasts) be handled for analysis? → 
+     Full transcription + chunked analysis
+
+     · The PRD mentions Whisper for transcription. Where should 
+     transcription run? → YouTube captions first, Whisper fallback
+
+⏺ Smart choices - Claude Opus 4.5 is excellent for creative marketing analysis, and the YouTube captions-first approach will save significant processing time and cost. Let me dig into the source discovery mechanics.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · For YouTube/Podcast search, how should the tool discover content? 
+     yt-dlp can download but needs URLs or search queries. → AI generates 
+     search queries
+
+     · When a user analyzes multiple sources (e.g., 5 videos), how should 
+     results be generated? → Parallel processing
+
+     · How many Claims and Hooks should be generated per source? → 3-5 each
+      per source
+
+⏺ Now let me explore some edge cases and UX considerations that could significantly impact implementation.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · What should happen when a source can't be accessed (video deleted, 
+     podcast unavailable, Reddit post removed)? → Skip and notify user
+
+     · Analysis could take 2-5+ minutes for multiple long videos. How 
+     should progress be communicated? → Detailed step-by-step progress
+     · The PRD mentions saving sessions to a sidebar History. How long 
+     should history be retained? → Indefinitely (localStorage)
+
+⏺ Good. Now let me probe some business logic and content quality concerns.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · Should the tool filter out potentially problematic claims 
+     (unverified health claims, FTC-risky statements)? → No filtering
+     · PubMed returns academic papers. How should scientific content be 
+     handled differently than podcasts/YouTube? → Translate to layman 
+     terms, Full paper analysis, Link to source + simplified summary
+     · Should there be any rate limiting or usage caps (even without auth)?
+      → No limits
+
+⏺ Now let me explore the Source Categories more deeply - the PRD gives examples for Health & Supplements but mentions each niche should have unique categories.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · Should I generate the full Source Category lists for all 11 niches, 
+     or do you have existing lists you want to use? → Generate all 
+     categories
+     · The PRD shows 9 categories per strategy. Is this the right number, 
+     or should there be more/fewer options? → 12-15 categories
+
+     · When users add custom categories, should these be private or shared 
+     with the community? → Private only
+
+⏺ Let me dig into some UI/UX specifics and edge cases.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · After the 20 sources are displayed, users select which to analyze. 
+     What if they want to see MORE sources before selecting? → Load More 
+     button
+
+     · For the Claims and Hooks results view, how should users 
+     organize/filter the output? → Full sorting and filtering 
+     capaibilities, in addition to tags on Claims/Hooks, e.g. Total: X, 
+     Source: Pubmed, etc
+     · Should users be able to regenerate/refine individual hooks they 
+     like? → Yes, Generate Variation button with textarea so useres can 
+     input feedback and generate a variation of the hoo
+
+⏺ Excellent - the variation generation with user feedback is a great feature. Let me explore a few more important implementation details.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · The Reddit API credentials are in the PRD. Should these be stored 
+     server-side (secure) or client-side (visible in network tab)? → 
+     Server-side only (Recommended)
+     · What's the mobile experience expectation? → Fully responsive
+     · Should there be a 'Quick Start' mode for users who just want to 
+     paste a single YouTube URL and get hooks? → No - keep the full flow
+
+⏺ Good security choice. Let me ask about some edge cases around the "translocation" concept and output quality.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · For Translocate mode, how 'distant' should the AI go when making 
+     bridges? The quantum physics → testosterone example is quite a leap. →
+      Should be a range - some aggressive, some moderate, some 
+     conservative. Please also include if Bridge is 
+     Aggressive/Moderate/Conservative.
+
+     · Should the tool provide guidance on which Angle Types work best for 
+     different products/niches? → No - let users discover
+     · What happens if the AI can't find enough surprising claims in a 
+     source (e.g., generic motivational video)? → Try harder - find 
+     something
+
+⏺ Great - the bridge distance range is a smart approach. Let me ask about a few remaining technical and UX concerns.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · For Reddit source analysis, what should be analyzed - just the 
+     original post, or comments too? → Post + top 20 comments
+     · The export format is MD (Markdown). Should there be additional 
+     export options? → MD only is fine
+     · Should users be able to favorite/star specific Claims or Hooks for 
+     quick reference later? → Yes - star button on each item
+
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · What visual design direction should the UI take? → Match CA Pro 
+     branding
+     · Should there be any onboarding or tutorial for first-time users? → 
+     None - interface should be self-explanatory
+
+     · Any specific error messaging tone preference? → Direct/professional
+
+
+⏺ Let me ask a couple final questions to wrap up the interview.
+                                                                         
+⏺ User answered Claude's questions:
+  ⎿  · Is there anything in Stefan's 'Breakthrough Ideas' training or 
+     methodology that should be explicitly referenced in the UI or prompts?
+      → Yes, here is more context on specific concepts to incorporate. 
+     Don't need to include in UI but should include relevant context from 
+     our PRD and this added context to our prompts to get the best copy for
+      Hooks/Claims we can possibly get: '''Big Idea Criteria
+
+       A "Big Idea" isn't just a good idea — it's the central, compelling 
+     concept that makes your entire ad work. Criteria:
+
+       1. Emotionally Compelling
+       Hits a deep desire or fear. Not intellectual — visceral.
+
+       2. Contains Built-In Intrigue
+       Creates an open loop. The reader needs to know more.
+
+       3. Easily Understood
+       Can be grasped in seconds. If you need to explain it, it's not big 
+     enough.
+
+       4. Believable (but surprising)
+       Novel enough to be interesting, credible enough to not get 
+     dismissed.
+
+       5. Difficult to Steal
+       Tied to your specific product/mechanism. Competitors can't just copy
+      the headline.
+
+       ---
+       Mechanism-First Copywriting
+
+       The "mechanism" is the why it works — the specific process, 
+     ingredient, method, or system that makes your product deliver results.
+
+       Why it matters:
+       - Claims are commoditized ("lose weight fast")
+       - Mechanisms are differentiators ("the 3-second lymphatic flip that 
+     unlocks fat cells")
+
+       Structure:
+       1. Identify the core mechanism (real or named)
+       2. Make it the star of your copy
+       3. Tie all claims back to the mechanism
+       4. The mechanism answers "why is YOUR solution different?"
+
+       Example:
+       - Weak: "This supplement burns fat"
+       - Mechanism-first: "The Ethiopian Yellow Root that reactivates your 
+     body's dormant brown fat cells"
+
+       ---
+       Big Idea Categories
+
+       1. Hidden Cause — There's a secret reason behind your problem
+       2. Emerging Opportunity — New discovery/timing makes this possible 
+     now
+       3. David vs Goliath — Small/underdog solution beats the 
+     establishment
+       4. Contrarian/Paradigm Shift — Everything you've been told is wrong
+       5. Crystal Ball — Prediction-based, what's coming
+     '''
+
+
+
+
+
+
+
+     · What's the timeline expectation for the MVP? → Full-featured launch
+
+     · Any additional features or considerations I haven't asked about? → 
+     No - good coverage
+
+
+⏺ This is excellent context on Stefan's methodology. The Big Idea Criteria and Mechanism-First frameworks should absolutely be baked into the prompts. Let me now update the PRD with all the decisions from this interview.
+
+⏺ Read(Angle Finder PRD.md)
+  ⎿  Read 147 lines
+
+⏺ Now I'll update the PRD with all the interview findings.
+
+⏺ Write(Angle Finder PRD.md)
+  ⎿  Added 332 lines, removed 104 lines                                  
+        1 -I want to build a tool for a process for coming up with new an
+          -gles/hooks/ideas for DTC ads. I am building this for Stefan Ge
+          -orgi ([https://www.stefanpaulgeorgi.com/](https://www.stefanpa
+          -ulgeorgi.com/), [https://www.youtube.com/@StefanGeorgi1](https
+          -://www.youtube.com/@StefanGeorgi1), [https://x.com/StefanGeorg
+          -i](https://x.com/StefanGeorgi)) and his mastermind, CA Pro ([c
+          -opyaccelerator.com](http://copyaccelerator.com)).             
+        1 +# Angle Finder PRD                                            
+        2  
+        3 -We want to reference his “breakthrough ideas” training, as wel
+          -l as his idea of “translocation” of ideas \- the idea that you
+          - can find a marketing idea or angle or hook from one ad, or fi
+          -nd an interesting idea in a seemingly very unrelated niche, an
+          -d then apply it to your product or niche.                     
+        3 +I want to build a tool for a process for coming up with new an
+          +gles/hooks/ideas for DTC ads. I am building this for Stefan Ge
+          +orgi ([https://www.stefanpaulgeorgi.com/](https://www.stefanpa
+          +ulgeorgi.com/), [https://www.youtube.com/@StefanGeorgi1](https
+          +://www.youtube.com/@StefanGeorgi1), [https://x.com/StefanGeorg
+          +i](https://x.com/StefanGeorgi)) and his mastermind, CA Pro ([c
+          +opyaccelerator.com](http://copyaccelerator.com)).             
+        4  
+        5 -This tool should essentially automate the generation of unique
+          - angles/hooks/big ideas using agentic capabilities and researc
+          -h.                                                            
+        5 +We want to reference his "breakthrough ideas" training, as wel
+          +l as his idea of "translocation" of ideas \- the idea that you
+          + can find a marketing idea or angle or hook from one ad, or fi
+          +nd an interesting idea in a seemingly very unrelated niche, an
+          +d then apply it to your product or niche.                     
+        6  
+        7 +This tool should essentially automate the generation of unique
+          + angles/hooks/big ideas using agentic capabilities and researc
+          +h.                                                            
+        8 +                                                              
+        9 +---                                                           
+       10 +                                                              
+       11 +## Technical Specifications                                   
+       12 +                                                              
+       13 +### Tech Stack                                                
+       14 +- **Framework**: Next.js Full-Stack (React frontend with API r
+          +outes)                                                        
+       15 +- **Deployment**: Vercel                                      
+       16 +- **AI Backend**: Claude API with Opus 4.5                    
+       17 +- **Authentication**: None required (no auth, sessions stored 
+          +locally)                                                      
+       18 +                                                              
+       19 +### API Integrations                                          
+       20 +- **YouTube**: YouTube Data API for search, yt-dlp for transcr
+          +ipt extraction                                                
+       21 +- **Transcription**: YouTube captions first, OpenAI Whisper AP
+          +I as fallback                                                 
+       22 +- **Reddit**: Server-side API calls (credentials stored secure
+          +ly in Vercel env vars)                                        
+       23 +- **PubMed**: NCBI E-utilities API                            
+       24 +                                                              
+       25 +### Security                                                  
+       26 +- All API credentials stored server-side in environment variab
+          +les                                                           
+       27 +- Reddit API calls proxied through Next.js API routes (never e
+          +xposed client-side)                                           
+       28 +                                                              
+       29 +---                                                           
+       30 +                                                              
+       31 +## User Flow                                                  
+       32 +                                                              
+       33 +### Step 1: Select Niche                                      
+       34 +                                                              
+       35  User will have a dropdown menu for Selecting Their Niche:
+       36  
+        9 --  Health & Supplements                                       
+       10 --   Skincare & Beauty                                         
+       11 --   Fitness & Performance                                     
+       12 --   Biz Opp & Make Money                                      
+       13 --   Coaching & Self-Help                                      
+       14 --   Spirituality & Astrology                                  
+       15 --   Pet Products                                              
+       16 --   Home & Lifestyle                                          
+       17 --   Medical Devices                                           
+       18 --   Finance & Insurance                                       
+       19 -- Other                                                       
+       37 +-  Health & Supplements                                       
+       38 +-   Skincare & Beauty                                         
+       39 +-   Fitness & Performance                                     
+       40 +-   Biz Opp & Make Money                                      
+       41 +-   Coaching & Self-Help                                      
+       42 +-   Spirituality & Astrology                                  
+       43 +-   Pet Products                                              
+       44 +-   Home & Lifestyle                                          
+       45 +-   Medical Devices                                           
+       46 +-   Finance & Insurance                                       
+       47 +- Other                                                       
+       48    - If other is selected, textarea for them to input their nic
+           he
+       49  
+       22 -They will also have a textarea to describe their specific prod
+          -uct, e.g. “I sell a testosterone boosting supplement for men 3
+          -5+. Main ingredients are Tongkat Ali and Fadogia. Target audie
+          -nce cares about energy, libido, and maintaining muscle as they
+          - age.” \< please have a variation of placeholder text for what
+          -ever Niche the user selects.                                  
+       50 +### Step 2: Describe Product                                  
+       51  
+       52 +They will also have a textarea to describe their specific prod
+          +uct, e.g. "I sell a testosterone boosting supplement for men 3
+          +5+. Main ingredients are Tongkat Ali and Fadogia. Target audie
+          +nce cares about energy, libido, and maintaining muscle as they
+          + age." \< please have a variation of placeholder text for what
+          +ever Niche the user selects.                                  
+       53 +                                                              
+       54 +### Step 3: Choose Sourcing Strategy                          
+       55 +                                                              
+       56  After they input that, they will choose their sourcing strateg
+           y for the analysis:
+       57  
+       58  Here are the two types of strategies we want to support, with 
+           this example for the Health & Supplements Niche:
+       59  
+       28 -1) Translocate                                                
+       29 -   1) Purpose: Find marketing angles from completely UNRELATED
+          - fields to discover unique, unexpected connections your compet
+          -itors will never find.                                        
+       30 -   2) Example for "Health & Supplements" niche:               
+       31 -      1) Quantum Physics & Reality                            
+       32 -      2) Ancient Wisdom & Philosophy                          
+       33 -      3) Mathematics & Patterns                               
+       34 -      4) Economics & Markets                                  
+       35 -      5) Psychology & Behavior                                
+       36 -      6) Spirituality & Consciousness                         
+       37 -      7) Chaos Theory & Complexity                            
+       38 -      8) Peak Performance                                     
+       39 -      9) AI & Technology                                      
+       60 +1) Translocate                                                
+       61 +   1) Purpose: Find marketing angles from completely UNRELATED
+          + fields to discover unique, unexpected connections your compet
+          +itors will never find.                                        
+       62 +   2) Example for "Health & Supplements" niche:               
+       63 +      1) Quantum Physics & Reality                            
+       64 +      2) Ancient Wisdom & Philosophy                          
+       65 +      3) Mathematics & Patterns                               
+       66 +      4) Economics & Markets                                  
+       67 +      5) Psychology & Behavior                                
+       68 +      6) Spirituality & Consciousness                         
+       69 +      7) Chaos Theory & Complexity                            
+       70 +      8) Peak Performance                                     
+       71 +      9) AI & Technology                                      
+       72     3) Use case: You're selling a testosterone supplement. Inst
+           ead of analyzing other health or testosterone-related podcasts
+            (what everyone does), you analyze a quantum physics podcast a
+           nd find a physicist talking about "observer effects" — then br
+           idge that to "your testosterone levels change based on how you
+            measure and track them."
+       73  
+       42 -2) Direct                                                     
+       43 -   1) Purpose: Find angles from directly related fields — cont
+          -ent that's already in your wheelhouse but may have angles you 
+          -haven't explored.                                             
+       44 -   2)  Example for "Health & Supplements" niche:              
+       45 -      1) Neuroscience & Brain                                 
+       46 -      2) Genetics & Epigenetics                               
+       47 -      3) Longevity & Anti-Aging                               
+       48 -      4) Gut Microbiome                                       
+       49 -      5) Nutrition Science                                    
+       50 -      6) Sleep Science                                        
+       51 -      7) Hormones & Endocrinology                             
+       52 -      8) Functional Medicine                                  
+       53 -      9) Biohacking & Optimization                            
+       74 +2) Direct                                                     
+       75 +   1) Purpose: Find angles from directly related fields — cont
+          +ent that's already in your wheelhouse but may have angles you 
+          +haven't explored.                                             
+       76 +   2)  Example for "Health & Supplements" niche:              
+       77 +      1) Neuroscience & Brain                                 
+       78 +      2) Genetics & Epigenetics                               
+       79 +      3) Longevity & Anti-Aging                               
+       80 +      4) Gut Microbiome                                       
+       81 +      5) Nutrition Science                                    
+       82 +      6) Sleep Science                                        
+       83 +      7) Hormones & Endocrinology                             
+       84 +      8) Functional Medicine                                  
+       85 +      9) Biohacking & Optimization                            
+       86     3) Use case: You're selling the same testosterone supplemen
+           t. You mine a longevity podcast where David Sinclair discusses
+            NAD+ and mitochondrial function — directly applicable scienti
+           fic claims for your product.
+       87  
+       88 +### Step 4: Select Source Categories                          
+       89 +                                                              
+       90  After choosing source strategy, they will have to select sourc
+           e categories, which are dependent on which sourcing strategy t
+           hey have chosen. Each niche should have unique Source Categori
+           es, dependent on if Translocate or Direct is selected.
+       91  
+       92 +**Category Count**: 12-15 categories per niche per strategy (A
+          +I-generated for all 11 niches)                                
+       93 +                                                              
+       94  The user can select 1 or more categories. They also have the o
+           ption to add their own categories, which are saved for future 
+           use once selected.
+       95  
+       60 -After choosing Source Categories, they’ll see Source Options. 
+          -We want to support:                                           
+       96 +**Custom Categories**: Private only - visible only to the user
+          + who created them (stored in localStorage)                    
+       97  
+       62 -1) YouTube                                                    
+       63 -   1) We can use yt dlp                                       
+       64 -2) Podcast                                                    
+       65 -   1) We could also use yt dlp with filtering to find podcasts
+          - on youtube, such as 30+ min duration, keywords like podcast, 
+          -interview, episode, etc)                                      
+       66 -   2) We could also use RSS feeds of podcasts. There also may 
+          -be Podcast APIs we can use, I haven’t looked into this in-dept
+          -h.                                                            
+       67 -3) Reddit                                                     
+       68 -   1) We can use our Reddit API creds to find posts from relat
+          -ed (or unrelated subreddits), based on if user selects Translo
+          -cate or Direct.                                               
+       69 -   2) Credentials:                                            
+       70 -      1) App name: summarizer                                 
+       71 -      2) Details: mobKKGQ5oNjLEEPaZLVcmg                      
+       72 -      3) Secret: xz-sIeIOxn9MezyKyKr4XGnNqo7EdA               
+       73 -   3) Reddit API Docs: [https://www.reddit.com/dev/api/](https
+          -://www.reddit.com/dev/api/)                                   
+       74 -   4) A cool thing we can do with reddit posts is we can appen
+          -d “/.json” to the end of a post to get the full .json for the 
+          -post and comment threads.                                     
+       75 -      1) E.g. [https://www.reddit.com/r/Supplements/comments/1
+          -qdpww9/psa\_webber\_naturals\_magnesium\_bisglycinate\_is\_not
+          -](https://www.reddit.com/r/Supplements/comments/1qdpww9/psa_we
+          -bber_naturals_magnesium_bisglycinate_is_not) becomes [https://
+          -www.reddit.com/r/Supplements/comments/1qdpww9/psa\_webber\_nat
+          -urals\_magnesium\_bisglycinate\_is\_not/.json](https://www.red
+          -dit.com/r/Supplements/comments/1qdpww9/psa_webber_naturals_mag
+          -nesium_bisglycinate_is_not/.json)                             
+       76 -4) PubMed                                                     
+       98 +### Step 5: Select Source Types                               
+       99 +                                                              
+      100 +After choosing Source Categories, they'll see Source Options. 
+          +We want to support:                                           
+      101 +                                                              
+      102 +1) YouTube                                                    
+      103 +   1) We can use yt dlp                                       
+      104 +2) Podcast                                                    
+      105 +   1) We could also use yt dlp with filtering to find podcasts
+          + on youtube, such as 30+ min duration, keywords like podcast, 
+          +interview, episode, etc)                                      
+      106 +   2) We could also use RSS feeds of podcasts. There also may 
+          +be Podcast APIs we can use, I haven't looked into this in-dept
+          +h.                                                            
+      107 +3) Reddit                                                     
+      108 +   1) We can use our Reddit API creds to find posts from relat
+          +ed (or unrelated subreddits), based on if user selects Translo
+          +cate or Direct.                                               
+      109 +   2) Credentials:                                            
+      110 +      1) App name: summarizer                                 
+      111 +      2) Details: mobKKGQ5oNjLEEPaZLVcmg                      
+      112 +      3) Secret: xz-sIeIOxn9MezyKyKr4XGnNqo7EdA               
+      113 +   3) Reddit API Docs: [https://www.reddit.com/dev/api/](https
+          +://www.reddit.com/dev/api/)                                   
+      114 +   4) A cool thing we can do with reddit posts is we can appen
+          +d "/.json" to the end of a post to get the full .json for the 
+          +post and comment threads.                                     
+      115 +      1) E.g. [https://www.reddit.com/r/Supplements/comments/1
+          +qdpww9/psa\_webber\_naturals\_magnesium\_bisglycinate\_is\_not
+          +](https://www.reddit.com/r/Supplements/comments/1qdpww9/psa_we
+          +bber_naturals_magnesium_bisglycinate_is_not) becomes [https://
+          +www.reddit.com/r/Supplements/comments/1qdpww9/psa\_webber\_nat
+          +urals\_magnesium\_bisglycinate\_is\_not/.json](https://www.red
+          +dit.com/r/Supplements/comments/1qdpww9/psa_webber_naturals_mag
+          +nesium_bisglycinate_is_not/.json)                             
+      116 +4) PubMed                                                     
+      117     1) API Docs here: [https://www.ncbi.nlm.nih.gov/home/develo
+           p/api/](https://www.ncbi.nlm.nih.gov/home/develop/api/)
+      118  
+      119  If we need a good way to get accurate transcript for a source,
+            we can use Whisper.
+      120  
+      121 +### Step 6: Source Discovery & Selection                      
+      122 +                                                              
+      123 +**Discovery Method**: AI generates optimal search queries base
+          +d on niche + selected categories using Claude                 
+      124 +                                                              
+      125  Users can select one Source or multiple. We should return 20 s
+           ources total, split between whatever Source(s) they select. Al
+           so filter for Sort By (Most Views, Most Engagement). We will t
+           hen return the results tagged with Source, Title/Episode/Etc, 
+           Link, Views. Users can select one or more and then click Analy
+           ze to start analyzing.
+      126  
+       83 -Loading state for Analysis so user understands our tool is wor
+          -king in the background.                                       
+      127 +**Pagination**: "Load More" button to fetch 20 additional sour
+          +ces on demand                                                 
+      128  
+       85 -After analysis is complete, we want to have 2 sections: Claims
+          -, and Hooks.                                                  
+      129 +**Failed Sources**: Skip unavailable sources and notify user i
+          +nline, continue with remaining sources                        
+      130  
+      131 +---                                                           
+      132 +                                                              
+      133 +## Analysis Processing                                        
+      134 +                                                              
+      135 +### Long Content Handling                                     
+      136 +- **Method**: Full transcription + chunked analysis           
+      137 +- **Transcription Priority**: YouTube captions first, Whisper 
+          +API fallback for content without captions                     
+      138 +- **Multi-Source Processing**: Parallel processing - analyze a
+          +ll selected sources simultaneously, combine results at end    
+      139 +                                                              
+      140 +### Reddit Analysis Depth                                     
+      141 +- Analyze original post + top 20 comments (discussion often co
+          +ntains valuable insights)                                     
+      142 +                                                              
+      143 +### PubMed Scientific Content                                 
+      144 +- Full paper analysis                                         
+      145 +- Translate scientific claims to layman terms                 
+      146 +- Link to source + provide simplified summary                 
+      147 +- Preserve academic credibility while making content usable   
+      148 +                                                              
+      149 +### Output Volume                                             
+      150 +- **3-5 Claims per source**                                   
+      151 +- **3-5 Hooks per source**                                    
+      152 +- If source lacks sufficient surprising claims, AI should work
+          + harder to find something - always output the requested quanti
+          +ty                                                            
+      153 +                                                              
+      154 +### Loading State                                             
+      155 +Detailed step-by-step progress display:                       
+      156 +- "Fetching transcript..."                                    
+      157 +- "Analyzing claims..."                                       
+      158 +- "Generating hooks..."                                       
+      159 +- Show progress for each source being processed               
+      160 +                                                              
+      161 +---                                                           
+      162 +                                                              
+      163 +## Output: Claims                                             
+      164 +                                                              
+      165 +After analysis is complete, we want to have 2 sections: Claims
+          +, and Hooks.                                                  
+      166 +                                                              
+      167  Each Claim should be expandable, and include the following:
+      168  
+       89 -1) The Claim                                                  
+       90 -   1) Example: Testing yourself BEFORE studying enhances memor
+          -y more than traditional study methods through 'error-driven le
+          -arning'                                                       
+       91 -2) Exact Quote                                                
+       92 -   1) Example: you can even test yourself before you study and
+          - that can actually enhance memory too and so this is a method 
+          -that I talk about in the book called error driven learning and
+          - the idea is is that when you actually force yourself to try t
+          -o pull up information from memory and challenging circumstance
+          -s what happens is when you do get the right answer essentially
+          - there's changes... that essentially there's parts of a cell a
+          -ssembly that gives rise to a memory that are not necessarily v
+          -ery helpful and adaptive and there's some that are very very e
+          -ffective                                                      
+       93 -3) Surprise Score                                             
+       94 -   1) Example: 9                                              
+       95 -4) Mechanism                                                  
+      169 +1) The Claim                                                  
+      170 +   1) Example: Testing yourself BEFORE studying enhances memor
+          +y more than traditional study methods through 'error-driven le
+          +arning'                                                       
+      171 +2) Exact Quote                                                
+      172 +   1) Example: you can even test yourself before you study and
+          + that can actually enhance memory too and so this is a method 
+          +that I talk about in the book called error driven learning and
+          + the idea is is that when you actually force yourself to try t
+          +o pull up information from memory and challenging circumstance
+          +s what happens is when you do get the right answer essentially
+          + there's changes... that essentially there's parts of a cell a
+          +ssembly that gives rise to a memory that are not necessarily v
+          +ery helpful and adaptive and there's some that are very very e
+          +ffective                                                      
+      173 +3) Surprise Score                                             
+      174 +   1) Example: 9                                              
+      175 +4) Mechanism                                                  
+      176     1) Example: When the brain struggles to recall information 
+           before learning it, it creates stronger neural pathways by eli
+           minating weak connections and strengthening effective ones. Th
+           e struggle itself reconfigures memory networks for optimal per
+           formance.
+      177  
+      178 +---                                                           
+      179 +                                                              
+      180 +## Output: Hooks                                              
+      181 +                                                              
+      182  Each Hook should be expandable, and include the following:
+      183  
+      100 -1) Hook Headline                                              
+      101 -   1) A compelling headline that could open an ad or VSL. Shou
+          -ld be specific and intriguing — not generic.                  
+      102 -      1) Example: Harvard Neuroscientist Discovers Why Taking 
+          -Supplements BEFORE You Need Them Makes Them 10X More Effective
+          -                                                              
+      103 -2) Source Claim                                               
+      104 -   1) The original surprising/counterintuitive claim from the 
+          -podcast. Distilled into your own words, backed by an exact quo
+          -te.                                                           
+      105 -      1) Example: Testing yourself BEFORE studying enhances me
+          -mory more than traditional study methods through 'error-driven
+          - learning'                                                    
+      106 -3) The Bridge                                                 
+      107 -   1) The "aha\!" connection between the source claim and your
+          - product/niche. This is the magic — the unexpected but believa
+          -ble link.                                                     
+      108 -      1) Example: Just like the brain gets stronger when chall
+          -enged BEFORE learning new information, your body's cellular sy
+          -stems become dramatically more responsive to nutrients when th
+          -ey're in a 'challenged' or depleted state rather than an optim
+          -al one. This explains why most people see minimal results from
+          - supplements \- they're taking them when comfortable, not when
+          - primed.                                                      
+      109 -4) Angle Type                                                 
+      110 -   1) Can be one or more:                                     
+      111 -      1) Hidden Cause                                         
+      112 -      2) Deficiency                                           
+      113 -      3) Contamination                                        
+      114 -      4) Timing/Method                                        
+      115 -      5) Differentiation                                      
+      116 -      6) Identity                                             
+      117 -      7) Contrarian                                           
+      184 +1) Hook Headline                                              
+      185 +   1) A compelling headline that could open an ad or VSL. Shou
+          +ld be specific and intriguing — not generic.                  
+      186 +      1) Example: Harvard Neuroscientist Discovers Why Taking 
+          +Supplements BEFORE You Need Them Makes Them 10X More Effective
+      187 +2) Source Claim                                               
+      188 +   1) The original surprising/counterintuitive claim from the 
+          +podcast. Distilled into your own words, backed by an exact quo
+          +te.                                                           
+      189 +      1) Example: Testing yourself BEFORE studying enhances me
+          +mory more than traditional study methods through 'error-driven
+          + learning'                                                    
+      190 +3) The Bridge                                                 
+      191 +   1) The "aha\!" connection between the source claim and your
+          + product/niche. This is the magic — the unexpected but believa
+          +ble link.                                                     
+      192 +      1) Example: Just like the brain gets stronger when chall
+          +enged BEFORE learning new information, your body's cellular sy
+          +stems become dramatically more responsive to nutrients when th
+          +ey're in a 'challenged' or depleted state rather than an optim
+          +al one. This explains why most people see minimal results from
+          + supplements \- they're taking them when comfortable, not when
+          + primed.                                                      
+      193 +4) **Bridge Distance** (NEW)                                  
+      194 +   1) Label indicating how bold the connection is:            
+      195 +      - **Aggressive**: Wild, unexpected leap (quantum physics
+          + → supplements)                                               
+      196 +      - **Moderate**: Interesting but believable connection   
+      197 +      - **Conservative**: Clear logical through-line          
+      198 +   2) Each analysis should produce a range of bridge distances
+          + across the generated hooks                                   
+      199 +5) Angle Type                                                 
+      200 +   1) Can be one or more:                                     
+      201 +      1) Hidden Cause                                         
+      202 +      2) Deficiency                                           
+      203 +      3) Contamination                                        
+      204 +      4) Timing/Method                                        
+      205 +      5) Differentiation                                      
+      206 +      6) Identity                                             
+      207 +      7) Contrarian                                           
+      208           1) Example: Timing/Method \+ Contrarian
+      209  
+      120 -5) Big Idea Summary                                           
+      121 -   1) One paragraph explaining the core concept and why it wor
+          -ks as a marketing angle.                                      
+      122 -      1) Example: The supplement industry has it backwards. In
+          -stead of taking nutrients when you feel good, neuroscience sho
+          -ws your body absorbs and utilizes compounds most effectively w
+          -hen taken during strategic challenge windows \- like before wo
+          -rkouts, during fasting, or when slightly stressed. This 'pre-c
+          -hallenge priming' creates the biological equivalent of error-d
+          -riven learning, where struggle enhances adaptation.           
+      123 -6) Virality Score (1-10 for each below)                       
+      124 -   1) Easy To Understand                                      
+      125 -      1) Can average person grasp it in 5 seconds?            
+      126 -   2) Emotional                                               
+      127 -      1) Does it trigger curiosity, fear, excitement, or “aha\
+          -!”?                                                           
+      128 -   3) Curiosity Inducing                                      
+      129 -      1) Does it create an open loop  or make them need to kno
+          -w more?                                                       
+      130 -   4) Contrarian (Paradigm Shifting)                          
+      131 -      1) Does it challenge conventional wisdom or shift paradi
+          -gms?                                                          
+      132 -   5) Provable                                                
+      133 -      1) Is it backed by studies, data, or demonstrable phenom
+          -ena?                                                          
+      134 -   6) Total                                                   
+      135 -      1) Total up the score of all categories                 
+      136 -7) Sample Ad Opener                                           
+      137 -   1) A 3-4 sentence ad opener using the angle. Should be comp
+          -elling and specific — ready to use or adapt as the opening of 
+          -an ad, VSL, or email.                                         
+      210 +6) Big Idea Summary                                           
+      211 +   1) One paragraph explaining the core concept and why it wor
+          +ks as a marketing angle.                                      
+      212 +      1) Example: The supplement industry has it backwards. In
+          +stead of taking nutrients when you feel good, neuroscience sho
+          +ws your body absorbs and utilizes compounds most effectively w
+          +hen taken during strategic challenge windows \- like before wo
+          +rkouts, during fasting, or when slightly stressed. This 'pre-c
+          +hallenge priming' creates the biological equivalent of error-d
+          +riven learning, where struggle enhances adaptation.           
+      213 +7) Virality Score (1-10 for each below)                       
+      214 +   1) Easy To Understand                                      
+      215 +      1) Can average person grasp it in 5 seconds?            
+      216 +   2) Emotional                                               
+      217 +      1) Does it trigger curiosity, fear, excitement, or "aha\
+          +!"?                                                           
+      218 +   3) Curiosity Inducing                                      
+      219 +      1) Does it create an open loop  or make them need to kno
+          +w more?                                                       
+      220 +   4) Contrarian (Paradigm Shifting)                          
+      221 +      1) Does it challenge conventional wisdom or shift paradi
+          +gms?                                                          
+      222 +   5) Provable                                                
+      223 +      1) Is it backed by studies, data, or demonstrable phenom
+          +ena?                                                          
+      224 +   6) Total                                                   
+      225 +      1) Total up the score of all categories                 
+      226 +8) Sample Ad Opener                                           
+      227 +   1) A 3-4 sentence ad opener using the angle. Should be comp
+          +elling and specific — ready to use or adapt as the opening of 
+          +an ad, VSL, or email.                                         
+      228        1) Example: A Harvard neuroscientist just proved that yo
+           ur brain learns 10X faster when you test yourself BEFORE study
+           ing, not after. Now researchers are applying this same 'challe
+           nge-first' principle to supplementation \- and the results are
+            staggering. What if everything you knew about when to take yo
+           ur vitamins was completely backwards? Here's why taking supple
+           ments during your body's 'struggle windows' could be the missi
+           ng key to finally seeing real results...
+      229  
+      230  These examples are pulled from following inputs:
+      231  
+      142 -1) Source: [https://www.youtube.com/watch?v=\_uOLii9sDiE](http
+          -s://www.youtube.com/watch?v=_uOLii9sDiE)                      
+      143 -2) Niche: Health & Supplements                                
+      144 -3) Source Strategy: Direct                                    
+      232 +1) Source: [https://www.youtube.com/watch?v=\_uOLii9sDiE](http
+          +s://www.youtube.com/watch?v=_uOLii9sDiE)                      
+      233 +2) Niche: Health & Supplements                                
+      234 +3) Source Strategy: Direct                                    
+      235  4) Source Category: Neuroscience & Brain
+      236  
+      147 -The final section will be Save & Export. Research sessions sho
+          -uld automatically be saved in a sort of History accessible thr
+          -ough left-side sidebar. Users can download individual Claims a
+          -nd Hooks as MD files. Users can also Download all Hooks as MD 
+          -or all Claims as MD, or all Hooks \+ Claims as MD.            
+      237   No newline at end of file
+      238 +---                                                           
+      239 +                                                              
+      240 +## Results View Features                                      
+      241 +                                                              
+      242 +### Filtering & Sorting                                       
+      243 +- Sort by Virality Score (Total) - highest at top             
+      244 +- Filter by Angle Type (show only "Contrarian", "Hidden Cause"
+          +, etc.)                                                       
+      245 +- Group by source (organize results by which video/podcast the
+          +y came from)                                                  
+      246 +- Tags displayed on each Claim/Hook: Total score, Source type 
+          +(YouTube/Reddit/PubMed), Angle Type                           
+      247 +                                                              
+      248 +### Favorites                                                 
+      249 +- Star button on each Claim and Hook                          
+      250 +- Starred items appear in a dedicated Favorites section       
+      251 +- Favorites persist in localStorage                           
+      252 +                                                              
+      253 +### Hook Variations                                           
+      254 +- "Generate Variation" button on each Hook                    
+      255 +- Textarea for user to input feedback/direction               
+      256 +- AI generates a new variation based on user input            
+      257 +                                                              
+      258 +---                                                           
+      259 +                                                              
+      260 +## Save & Export                                              
+      261 +                                                              
+      262 +Research sessions should automatically be saved in a sort of H
+          +istory accessible through left-side sidebar. Users can downloa
+          +d individual Claims and Hooks as MD files. Users can also Down
+          +load all Hooks as MD or all Claims as MD, or all Hooks \+ Clai
+          +ms as MD.                                                     
+      263 +                                                              
+      264 +### History                                                   
+      265 +- All sessions saved automatically to localStorage            
+      266 +- Retained indefinitely                                       
+      267 +- User-managed deletion (manual delete only)                  
+      268 +- Sessions displayed in left sidebar with date and niche      
+      269 +                                                              
+      270 +### Export Format                                             
+      271 +- Markdown (MD) only                                          
+      272 +                                                              
+      273 +---                                                           
+      274 +                                                              
+      275 +## UI/UX Specifications                                       
+      276 +                                                              
+      277 +### Design Direction                                          
+      278 +- Match CA Pro (Copy Accelerator) branding                    
+      279 +- Fully responsive - equal experience on all devices (desktop,
+          + tablet, mobile)                                              
+      280 +                                                              
+      281 +### Onboarding                                                
+      282 +- None - interface should be self-explanatory                 
+      283 +                                                              
+      284 +### Error Messages                                            
+      285 +- Direct and professional tone                                
+      286 +- Example: "Video unavailable. Please try another source."    
+      287 +                                                              
+      288 +### Content Filtering                                         
+      289 +- No filtering of claims - surface everything, let user decide
+          + what to use                                                  
+      290 +                                                              
+      291 +### Usage Limits                                              
+      292 +- No rate limiting or usage caps                              
+      293 +                                                              
+      294 +---                                                           
+      295 +                                                              
+      296 +## Stefan Georgi Methodology (For AI Prompts)                 
+      297 +                                                              
+      298 +The following frameworks from Stefan's training should be inco
+          +rporated into the AI analysis prompts:                        
+      299 +                                                              
+      300 +### Big Idea Criteria                                         
+      301 +                                                              
+      302 +A "Big Idea" isn't just a good idea — it's the central, compel
+          +ling concept that makes your entire ad work. Criteria:        
+      303 +                                                              
+      304 +1. **Emotionally Compelling** - Hits a deep desire or fear. No
+          +t intellectual — visceral.                                    
+      305 +2. **Contains Built-In Intrigue** - Creates an open loop. The 
+          +reader needs to know more.                                    
+      306 +3. **Easily Understood** - Can be grasped in seconds. If you n
+          +eed to explain it, it's not big enough.                       
+      307 +4. **Believable (but surprising)** - Novel enough to be intere
+          +sting, credible enough to not get dismissed.                  
+      308 +5. **Difficult to Steal** - Tied to your specific product/mech
+          +anism. Competitors can't just copy the headline.              
+      309 +                                                              
+      310 +### Mechanism-First Copywriting                               
+      311 +                                                              
+      312 +The "mechanism" is the why it works — the specific process, in
+          +gredient, method, or system that makes your product deliver re
+          +sults.                                                        
+      313 +                                                              
+      314 +Why it matters:                                               
+      315 +- Claims are commoditized ("lose weight fast")                
+      316 +- Mechanisms are differentiators ("the 3-second lymphatic flip
+          + that unlocks fat cells")                                     
+      317 +                                                              
+      318 +Structure:                                                    
+      319 +1. Identify the core mechanism (real or named)                
+      320 +2. Make it the star of your copy                              
+      321 +3. Tie all claims back to the mechanism                       
+      322 +4. The mechanism answers "why is YOUR solution different?"    
+      323 +                                                              
+      324 +Example:                                                      
+      325 +- Weak: "This supplement burns fat"                           
+      326 +- Mechanism-first: "The Ethiopian Yellow Root that reactivates
+          + your body's dormant brown fat cells"                         
+      327 +                                                              
+      328 +### Big Idea Categories                                       
+      329 +                                                              
+      330 +1. **Hidden Cause** — There's a secret reason behind your prob
+          +lem                                                           
+      331 +2. **Emerging Opportunity** — New discovery/timing makes this 
+          +possible now                                                  
+      332 +3. **David vs Goliath** — Small/underdog solution beats the es
+          +tablishment                                                   
+      333 +4. **Contrarian/Paradigm Shift** — Everything you've been told
+          + is wrong                                                     
+      334 +5. **Crystal Ball** — Prediction-based, what's coming         
+      335 +                                                              
+      336 +---                                                           
+      337 +                                                              
+      338 +## Interview Notes                                            
+      339 +                                                              
+      340 +Key decisions made during PRD review (January 2025):          
+      341 +                                                              
+      342 +### Technical Decisions                                       
+      343 +- Next.js full-stack chosen for seamless Vercel deployment and
+          + API route handling                                           
+      344 +- Claude Opus 4.5 selected for superior creative writing and a
+          +nalysis capabilities                                          
+      345 +- YouTube captions preferred over Whisper to reduce processing
+          + time/cost                                                    
+      346 +- All API credentials server-side only for security           
+      347 +                                                              
+      348 +### Processing Decisions                                      
+      349 +- Full transcription + chunked analysis for long content (no s
+          +mart sampling)                                                
+      350 +- Parallel processing for multi-source analysis               
+      351 +- 3-5 Claims and 3-5 Hooks per source (focused, high-quality) 
+      352 +- AI generates search queries based on niche + category select
+          +ion                                                           
+      353 +                                                              
+      354 +### UX Decisions                                              
+      355 +- Detailed step-by-step progress (not just progress bar)      
+      356 +- "Load More" button for additional sources beyond initial 20 
+      357 +- Skip failed sources with inline notification                
+      358 +- History stored indefinitely in localStorage                 
+      359 +- Full sorting/filtering capabilities on results              
+      360 +- Star/favorites feature for Claims and Hooks                 
+      361 +- "Generate Variation" with user feedback textarea            
+      362 +                                                              
+      363 +### Content Decisions                                         
+      364 +- Bridge distance range: generate Aggressive, Moderate, and Co
+          +nservative bridges                                            
+      365 +- Reddit: analyze post + top 20 comments                      
+      366 +- PubMed: full paper analysis with layman translation         
+      367 +- No compliance filtering - surface all claims                
+      368 +- No angle guidance - let users discover what works           
+      369 +- Always output requested 3-5 items even from weaker sources  
+      370 +                                                              
+      371 +### Design Decisions                                          
+      372 +- Match CA Pro branding                                       
+      373 +- Fully responsive (mobile, tablet, desktop)                  
+      374 +- No onboarding needed - self-explanatory UI                  
+      375 +- Direct/professional error messages                          
+      376 +- No usage limits                                             
+
+⏺ I've completed the PRD interview and updated the document. Here's a summary of what was covered and decided:
+
+  Interview Complete
+
+  The PRD has been updated with all decisions from our discussion. Key additions:
+
+  Technical Stack
+
+  - Next.js Full-Stack on Vercel
+  - Claude Opus 4.5 for AI analysis
+  - No authentication (localStorage sessions)
+  - Server-side API credentials for security
+
+  New Features Added to PRD
+
+  1. Bridge Distance labels (Aggressive/Moderate/Conservative) on each Hook
+  2. Generate Variation button with user feedback textarea
+  3. Favorites/Star system for Claims and Hooks
+  4. Full filtering/sorting on results (by score, angle type, source)
+  5. Tags on each item showing score, source type, angle type
+  6. Load More button for source pagination
+
+  Processing Decisions
+
+  - YouTube captions first, Whisper fallback
+  - Parallel processing for multiple sources
+  - Reddit: post + top 20 comments
+  - PubMed: full paper with layman translation
+  - 3-5 Claims + 3-5 Hooks per source
+
+  Stefan's Methodology
+
+  Added the Big Idea Criteria, Mechanism-First Copywriting, and Big Idea Categories frameworks to be incorporated into AI prompts.
+
+  The PRD is now ready for full-featured implementation. When you're ready to build, just run /build.
+
+✻ Sautéed for 4m 0s
+
+❯ /export 
+  ⎿  Conversation copied to clipboard
+
+❯ /export 
+  ⎿  Conversation copied to clipboard
+
+
+

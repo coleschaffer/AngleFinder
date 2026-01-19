@@ -1,0 +1,474 @@
+@import "tailwindcss";
+
+:root {
+  /* CA Pro Brand Colors - Orange Theme */
+  --ca-gold: #F0EFEF;
+  --ca-gold-dark: #d4d3d3;
+  --ca-gold-light: #ffffff;
+  --ca-black: #0F0F0F;
+  --ca-dark: #1A1A1A;
+  --ca-gray-dark: #2A2A2A;
+  --ca-gray: #404040;
+  --ca-gray-light: #6B6B6B;
+  --ca-white: #FAFAFA;
+  --ca-off-white: #F0F0F0;
+
+  --background: var(--ca-black);
+  --foreground: var(--ca-white);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ca-gold: var(--ca-gold);
+  --color-ca-gold-dark: var(--ca-gold-dark);
+  --color-ca-gold-light: var(--ca-gold-light);
+  --color-ca-black: var(--ca-black);
+  --color-ca-dark: var(--ca-dark);
+  --color-ca-gray-dark: var(--ca-gray-dark);
+  --color-ca-gray: var(--ca-gray);
+  --color-ca-gray-light: var(--ca-gray-light);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ca-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ca-gray);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ca-gray-light);
+}
+
+/* Selection */
+::selection {
+  background: var(--ca-gold);
+  color: var(--ca-black);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--ca-gold);
+  outline-offset: 2px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--ca-gray-dark) 0%,
+    var(--ca-gray) 50%,
+    var(--ca-gray-dark) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Button base styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  min-height: 2.75rem; /* 44px touch target */
+}
+
+@media (min-width: 768px) {
+  .btn {
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    min-height: auto;
+  }
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--ca-gold);
+  color: var(--ca-black);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--ca-gold-light);
+}
+
+.btn-secondary {
+  background: var(--ca-gray-dark);
+  color: var(--ca-white);
+  border: 1px solid var(--ca-gray);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--ca-gray);
+  border-color: var(--ca-gray-light);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ca-white);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--ca-gray-dark);
+}
+
+/* Card styles */
+.card {
+  background: var(--ca-dark);
+  border: 1px solid var(--ca-gray-dark);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: 1.5rem;
+  }
+}
+
+.card-hover:hover {
+  border-color: var(--ca-gold);
+}
+
+.card-selected {
+  border-color: var(--ca-gold);
+}
+
+/* Form inputs */
+.input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background: var(--ca-gray-dark);
+  border: 1px solid var(--ca-gray);
+  border-radius: 0.5rem;
+  color: var(--ca-white);
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+  min-height: 2.75rem; /* 44px touch target */
+}
+
+@media (min-width: 768px) {
+  .input {
+    padding: 0.75rem 1rem;
+    min-height: auto;
+  }
+}
+
+.input:focus {
+  border-color: var(--ca-gold);
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--ca-gray-light);
+}
+
+.textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Tags/Pills */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  background: var(--ca-gray-dark);
+  color: var(--ca-gray-light);
+  border: 1px solid var(--ca-gray);
+}
+
+.tag-gold {
+  background: rgba(240, 239, 239, 0.15);
+  color: var(--ca-gold);
+  border-color: var(--ca-gold);
+}
+
+/* Score badges */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+}
+
+.score-high {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22C55E;
+}
+
+.score-medium {
+  background: rgba(234, 179, 8, 0.15);
+  color: #EAB308;
+}
+
+.score-low {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 4px;
+  background: var(--ca-gray-dark);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--ca-gold);
+  transition: width 0.3s ease;
+}
+
+/* Feedback Modal Animations */
+@keyframes modalBackdropIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes checkDraw {
+  0% {
+    stroke-dashoffset: 50;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes goldShine {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes confettiFloat {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+@keyframes ringExpand {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.feedback-backdrop {
+  animation: modalBackdropIn 0.3s ease-out forwards;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.feedback-modal {
+  animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.success-circle {
+  animation: successPulse 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.success-check {
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: checkDraw 0.4s ease-out 0.3s forwards;
+}
+
+.gold-shine-text {
+  background: linear-gradient(
+    90deg,
+    var(--ca-gold) 0%,
+    var(--ca-gold-light) 25%,
+    #fff 50%,
+    var(--ca-gold-light) 75%,
+    var(--ca-gold) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldShine 2s linear infinite;
+}
+
+.confetti-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confettiFloat 1.5s ease-out forwards;
+}
+
+.sparkle-star {
+  position: absolute;
+  animation: sparkle 1s ease-in-out forwards;
+}
+
+.ring-expand {
+  position: absolute;
+  border: 2px solid var(--ca-gold);
+  border-radius: 50%;
+  animation: ringExpand 0.8s ease-out forwards;
+}
+
+/* Textarea focus glow */
+.feedback-textarea:focus {
+  box-shadow: 0 0 0 3px rgba(240, 239, 239, 0.15);
+  border-color: var(--ca-gold);
+}
+
+/* Send button hover effect */
+.feedback-send-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.feedback-send-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.feedback-send-btn:hover::before {
+  left: 100%;
+}
