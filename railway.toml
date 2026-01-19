@@ -1,0 +1,6 @@
+[build]
+workdir = "app"
+
+[deploy]
+workdir = "app"
+startCommand = "npm start"
