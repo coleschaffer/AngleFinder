@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
       itemType: body.itemType,
       awarenessLevel: body.awarenessLevel || 'emerging',
       momentumScore: body.momentumScore || 5,
-      isSweetSpot: body.isSweetSpot || false,
       niche: body.niche,
       sourceType: body.sourceType,
+      content: body.content,
     };
 
     await trackAnalyticsEvent(event);
