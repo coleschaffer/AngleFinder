@@ -85,8 +85,11 @@ export function Step5Discovery() {
   const abortControllers = useRef<Map<string, AbortController>>(new Map());
   // Debounce timer for selection changes
   const selectionDebounceTimer = useRef<NodeJS.Timeout | null>(null);
-  // Track previous selections to detect changes
+  // Track previous selections to detect changes (only updated after debounce fires)
   const previousSelections = useRef<Set<string>>(new Set());
+  // Accumulate pending additions/removals during debounce period
+  const pendingAdditions = useRef<Set<string>>(new Set());
+  const pendingRemovals = useRef<Set<string>>(new Set());
   // Background analysis queue and concurrency control
   const backgroundQueue = useRef<Source[]>([]);
   const activeBackgroundCount = useRef(0);
@@ -245,12 +248,19 @@ export function Step5Discovery() {
     const currentSelections = new Set(wizard.selectedSources);
     const prevSelections = previousSelections.current;
 
-    // Find newly selected and deselected sources
+    // Find newly selected and deselected sources (compared to last processed state)
     const newlySelected = wizard.selectedSources.filter(id => !prevSelections.has(id));
     const newlyDeselected = Array.from(prevSelections).filter(id => !currentSelections.has(id));
 
-    // Update previous selections
-    previousSelections.current = currentSelections;
+    // Accumulate pending changes (don't lose them during debounce)
+    for (const id of newlySelected) {
+      pendingAdditions.current.add(id);
+      pendingRemovals.current.delete(id); // Cancel any pending removal
+    }
+    for (const id of newlyDeselected) {
+      pendingRemovals.current.add(id);
+      pendingAdditions.current.delete(id); // Cancel any pending addition
+    }
 
     // Clear existing debounce timer
     if (selectionDebounceTimer.current) {
@@ -259,18 +269,23 @@ export function Step5Discovery() {
 
     // Set new debounce timer
     selectionDebounceTimer.current = setTimeout(() => {
-      // Cancel analysis for deselected sources immediately
-      for (const sourceId of newlyDeselected) {
+      // Process all accumulated removals
+      for (const sourceId of pendingRemovals.current) {
         cancelAnalysis(sourceId);
       }
 
-      // Queue analysis for newly selected sources
-      for (const sourceId of newlySelected) {
+      // Process all accumulated additions
+      for (const sourceId of pendingAdditions.current) {
         const source = wizard.discoveredSources.find(s => s.id === sourceId);
         if (source && !source.failed) {
           queueBackgroundAnalysis(source);
         }
       }
+
+      // Clear pending sets and update previous selections AFTER processing
+      pendingAdditions.current.clear();
+      pendingRemovals.current.clear();
+      previousSelections.current = new Set(wizard.selectedSources);
     }, 500); // 500ms debounce
 
     return () => {
