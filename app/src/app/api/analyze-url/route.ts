@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { Niche } from '@/types';
 import { NICHES } from '@/data/niches';
-
-const anthropic = new Anthropic();
+import { withRetry } from '@/lib/anthropic';
 
 interface AnalyzeURLRequest {
   url: string;
@@ -137,11 +135,13 @@ Return ONLY valid JSON in this exact format:
   "productDescription": "2-3 sentence description of the product for marketing purposes"
 }`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 512,
-      messages: [{ role: 'user', content: analysisPrompt }],
-    });
+    const message = await withRetry((client) =>
+      client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 512,
+        messages: [{ role: 'user', content: analysisPrompt }],
+      })
+    );
 
     // Parse Claude's response
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';

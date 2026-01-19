@@ -3,7 +3,7 @@
 import { useApp } from '@/context/AppContext';
 import { AnalysisResult, Source } from '@/types';
 import { NICHES } from '@/data/niches';
-import { Loader2, CheckCircle, XCircle, AlertCircle, Zap } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 
 export function Step6Analysis() {
@@ -21,7 +21,7 @@ export function Step6Analysis() {
   } = useApp();
 
   const [statusMessages, setStatusMessages] = useState<
-    { id: string; message: string; status: 'pending' | 'analyzing' | 'success' | 'error' | 'pre-analyzed' }[]
+    { id: string; message: string; status: 'pending' | 'analyzing' | 'success' | 'error' }[]
   >([]);
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const hasStarted = useRef(false);
@@ -69,8 +69,8 @@ export function Step6Analysis() {
           const result = getPreAnalyzedResult(s.id)!;
           return {
             id: s.id,
-            message: `Pre-analyzed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
-            status: 'pre-analyzed' as const,
+            message: `Completed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
+            status: 'success' as const,
           };
         }),
         ...pendingSources.map(s => ({
@@ -106,8 +106,8 @@ export function Step6Analysis() {
                 s.id === source.id
                   ? {
                       ...s,
-                      message: `Pre-analyzed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
-                      status: 'pre-analyzed' as const,
+                      message: `Completed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
+                      status: 'success' as const,
                     }
                   : s
               )
@@ -263,11 +263,10 @@ export function Step6Analysis() {
     runAnalysis();
   }, []); // Only run once on mount
 
-  const preAnalyzedCount = statusMessages.filter(s => s.status === 'pre-analyzed').length;
   const completedCount = statusMessages.filter(s => s.status === 'success').length;
   const errorCount = statusMessages.filter(s => s.status === 'error').length;
   const totalCount = statusMessages.length;
-  const progress = totalCount > 0 ? Math.round((preAnalyzedCount + completedCount + errorCount) / totalCount * 100) : 0;
+  const progress = totalCount > 0 ? Math.round((completedCount + errorCount) / totalCount * 100) : 0;
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
@@ -280,18 +279,6 @@ export function Step6Analysis() {
           Extracting claims and generating hooks from your selected content
         </p>
       </div>
-
-      {/* Pre-analyzed boost indicator */}
-      {preAnalyzedCount > 0 && (
-        <div className="mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-          <p className="text-xs text-green-400 flex items-center gap-2">
-            <Zap className="w-4 h-4" />
-            <span>
-              <strong>{preAnalyzedCount} source{preAnalyzedCount !== 1 ? 's' : ''}</strong> were pre-analyzed while you browsed — instant results!
-            </span>
-          </p>
-        </div>
-      )}
 
       {/* Progress Bar */}
       <div className="mb-8">
@@ -306,12 +293,9 @@ export function Step6Analysis() {
           />
         </div>
         <div className="flex justify-between text-xs mt-2 text-[var(--ca-gray-light)]">
-          <span>
-            {preAnalyzedCount > 0 && `${preAnalyzedCount} pre-analyzed, `}
-            {completedCount} completed
-          </span>
+          <span>{completedCount} completed</span>
           {errorCount > 0 && <span className="text-red-400">{errorCount} failed</span>}
-          <span>{totalCount - preAnalyzedCount - completedCount - errorCount} remaining</span>
+          <span>{totalCount - completedCount - errorCount} remaining</span>
         </div>
       </div>
 
@@ -319,14 +303,11 @@ export function Step6Analysis() {
       <div className="space-y-2">
         {statusMessages.map(status => {
           const isAnalyzing = status.status === 'analyzing';
-          const isPreAnalyzed = status.status === 'pre-analyzed';
           return (
             <div
               key={status.id}
               className={`flex items-center gap-3 p-3 rounded-lg ${
                 status.status === 'success'
-                  ? 'bg-green-500/10 border border-green-500/20'
-                  : isPreAnalyzed
                   ? 'bg-green-500/10 border border-green-500/20'
                   : status.status === 'error'
                   ? 'bg-red-500/10 border border-red-500/20'
@@ -337,8 +318,6 @@ export function Step6Analysis() {
             >
               {status.status === 'success' ? (
                 <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-              ) : isPreAnalyzed ? (
-                <Zap className="w-5 h-5 text-green-500 flex-shrink-0" />
               ) : status.status === 'error' ? (
                 <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
               ) : isAnalyzing ? (
@@ -348,7 +327,7 @@ export function Step6Analysis() {
               )}
               <span
                 className={`text-sm ${
-                  status.status === 'success' || isPreAnalyzed
+                  status.status === 'success'
                     ? 'text-green-400'
                     : status.status === 'error'
                     ? 'text-red-400'
