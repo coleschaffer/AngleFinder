@@ -259,8 +259,13 @@ export function Step5Discovery() {
       // Process modified results
       if (modifiedResponse.ok) {
         const modifiedData = await modifiedResponse.json();
-        // Modified sources already have modified: true from API
-        allSources = [...allSources, ...modifiedData.sources];
+        // Modified sources - ensure IDs are unique by adding suffix
+        // This prevents the same source from being "selected" across both tabs
+        const modifiedSources = modifiedData.sources.map((s: Source) => ({
+          ...s,
+          id: s.id.endsWith('-mod') ? s.id : `${s.id}-mod`,
+        }));
+        allSources = [...allSources, ...modifiedSources];
       }
 
       setDiscoveredSources(allSources);
@@ -306,7 +311,12 @@ export function Step5Discovery() {
         addDiscoveredSources(unmodifiedSources);
         setPage(nextPage);
       } else {
-        addDiscoveredSources(data.sources);
+        // Modified sources - ensure IDs are unique by adding suffix
+        const modifiedSources = data.sources.map((s: Source) => ({
+          ...s,
+          id: s.id.endsWith('-mod') ? s.id : `${s.id}-mod`,
+        }));
+        addDiscoveredSources(modifiedSources);
         setModifiedPage(nextPage);
       }
     } catch (error) {

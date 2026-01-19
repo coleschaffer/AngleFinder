@@ -4,6 +4,38 @@ import { Claim, SourceType, Hook, BridgeDistance, AngleType } from '@/types';
 
 const anthropic = new Anthropic();
 
+// Retry helper with exponential backoff for rate limits
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 2000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      if (error?.status === 429 && attempt < maxRetries) {
+        const retryAfter = error?.headers?.get?.('retry-after');
+        const delay = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : baseDelay * Math.pow(2, attempt);
+
+        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
+
 interface GenerateHookRequest {
   claim: Claim;
   sourceName: string;
@@ -68,11 +100,13 @@ Return your response as valid JSON with this exact structure:
   }
 }`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const response = await withRetry(() =>
+      anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      })
+    );
 
     const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
 

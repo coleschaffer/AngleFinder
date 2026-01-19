@@ -16,6 +16,8 @@ export function Step6Analysis() {
     saveSession,
     preAnalyzedResults,
     clearPreAnalyzedResults,
+    pendingAnalysis,
+    addPreAnalyzedResult,
   } = useApp();
 
   const [statusMessages, setStatusMessages] = useState<
@@ -42,8 +44,9 @@ export function Step6Analysis() {
       const sources = getSelectedSources();
       const allResults: AnalysisResult[] = [];
 
-      // Check which sources are already pre-analyzed
+      // Check which sources are already pre-analyzed, pending, or need analysis
       const preAnalyzedSources: Source[] = [];
+      const pendingSources: Source[] = [];
       const needsAnalysis: Source[] = [];
 
       for (const source of sources) {
@@ -51,12 +54,15 @@ export function Step6Analysis() {
           preAnalyzedSources.push(source);
           const result = preAnalyzedResults.get(source.id)!;
           allResults.push(result);
+        } else if (pendingAnalysis.has(source.id)) {
+          // Source is being analyzed in background - wait for it
+          pendingSources.push(source);
         } else {
           needsAnalysis.push(source);
         }
       }
 
-      // Initialize status messages - pre-analyzed ones show as completed
+      // Initialize status messages
       setStatusMessages([
         ...preAnalyzedSources.map(s => {
           const result = preAnalyzedResults.get(s.id)!;
@@ -66,6 +72,11 @@ export function Step6Analysis() {
             status: 'pre-analyzed' as const,
           };
         }),
+        ...pendingSources.map(s => ({
+          id: s.id,
+          message: `Waiting for background analysis: ${s.title.slice(0, 50)}...`,
+          status: 'analyzing' as const,
+        })),
         ...needsAnalysis.map(s => ({
           id: s.id,
           message: `Waiting to analyze: ${s.title.slice(0, 50)}...`,
@@ -73,7 +84,51 @@ export function Step6Analysis() {
         })),
       ]);
 
-      // If all sources were pre-analyzed, skip to results
+      // Wait for pending background analysis to complete
+      // Poll every 500ms until all pending sources are in preAnalyzedResults or no longer pending
+      const waitForPending = async () => {
+        for (const source of pendingSources) {
+          // Poll until this source is no longer pending
+          while (pendingAnalysis.has(source.id) && !preAnalyzedResults.has(source.id)) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+          // Check if it completed successfully
+          if (preAnalyzedResults.has(source.id)) {
+            const result = preAnalyzedResults.get(source.id)!;
+            allResults.push(result);
+            setStatusMessages(prev =>
+              prev.map(s =>
+                s.id === source.id
+                  ? {
+                      ...s,
+                      message: `Pre-analyzed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
+                      status: 'pre-analyzed' as const,
+                    }
+                  : s
+              )
+            );
+          } else {
+            // Background analysis failed or was cancelled - need to re-analyze
+            needsAnalysis.push(source);
+            setStatusMessages(prev =>
+              prev.map(s =>
+                s.id === source.id
+                  ? {
+                      ...s,
+                      message: `Waiting to analyze: ${source.title.slice(0, 50)}...`,
+                      status: 'pending' as const,
+                    }
+                  : s
+              )
+            );
+          }
+        }
+      };
+
+      await waitForPending();
+
+      // If all sources were pre-analyzed (or completed from pending), skip to results
       if (needsAnalysis.length === 0) {
         setIsAnalyzing(false);
         setResults(allResults);
@@ -88,7 +143,8 @@ export function Step6Analysis() {
 
       // Rolling concurrent pool - maintains N active tasks at all times
       // As each completes, immediately starts the next one
-      const concurrencyLimit = 20;
+      // Reduced from 20 to 3 to avoid hitting Anthropic rate limits
+      const concurrencyLimit = 3;
       const queue = [...needsAnalysis];
       const activeIds = new Set<string>();
       const executing = new Map<string, Promise<void>>();

@@ -2,8 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { Supadata } from '@supadata/js';
 import { Source, AnalysisResult, Claim, Hook, ViralityScore, BridgeDistance, AngleType, AwarenessLevel } from '@/types';
+import { logError } from '@/lib/db';
 
 const anthropic = new Anthropic();
+
+// Retry helper with exponential backoff for rate limits
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 2000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      // Check if it's a rate limit error (429)
+      if (error?.status === 429 && attempt < maxRetries) {
+        // Get retry-after header if available, otherwise use exponential backoff
+        const retryAfter = error?.headers?.get?.('retry-after');
+        const delay = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : baseDelay * Math.pow(2, attempt);
+
+        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // For non-rate-limit errors, throw immediately
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
 
 // Initialize Supadata client for YouTube transcripts
 const supadata = process.env.SUPADATA_API_KEY
@@ -534,11 +570,13 @@ Return your response as valid JSON with this exact structure:
   ]
 }`;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514', // Using Sonnet for cost efficiency, can switch to Opus
-    max_tokens: 4096,
-    messages: [{ role: 'user', content: analysisPrompt }],
-  });
+  const response = await withRetry(() =>
+    anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514', // Using Sonnet for cost efficiency, can switch to Opus
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: analysisPrompt }],
+    })
+  );
 
   const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
 
@@ -700,9 +738,20 @@ Based on this title and your knowledge of this topic, provide an analysis as if 
     };
 
     return NextResponse.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Analyze API error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const statusCode = error?.status || 500;
+
+    // Log error to database
+    await logError({
+      endpoint: '/api/analyze',
+      errorType: error?.status === 429 ? 'rate_limit' : 'analysis_error',
+      message: errorMessage,
+      statusCode,
+      requestData: { sourceId: body?.source?.id, sourceType: body?.source?.type },
+    });
+
     return NextResponse.json(
       { error: `Failed to analyze source: ${errorMessage}` },
       { status: 500 }

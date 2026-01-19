@@ -3,9 +3,42 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Source, SourceType, SEARCH_MODIFIERS } from '@/types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { logError } from '@/lib/db';
 
 const execAsync = promisify(exec);
 const anthropic = new Anthropic();
+
+// Retry helper with exponential backoff for rate limits
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 2000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      if (error?.status === 429 && attempt < maxRetries) {
+        const retryAfter = error?.headers?.get?.('retry-after');
+        const delay = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : baseDelay * Math.pow(2, attempt);
+
+        console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
 
 interface DiscoverRequest {
   niche: string;
@@ -481,11 +514,13 @@ Focus on:
 - Avoid meme/low-quality subreddits`;
 
       try {
-        const subredditResponse = await anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 256,
-          messages: [{ role: 'user', content: subredditPrompt }],
-        });
+        const subredditResponse = await withRetry(() =>
+          anthropic.messages.create({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 256,
+            messages: [{ role: 'user', content: subredditPrompt }],
+          })
+        );
 
         const subredditText = subredditResponse.content[0].type === 'text' ? subredditResponse.content[0].text : '';
         const subredditMatch = subredditText.match(/\[[\s\S]*?\]/);
@@ -534,11 +569,13 @@ Guidelines for each source type:
 
 Strategy guidance: ${strategy === 'translocate' ? 'Focus on unexpected connections from unrelated fields that could provide surprising marketing angles' : 'Focus on cutting-edge research and expert insights directly about this topic'}`;
 
-    const queryResponse = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: queryPrompt }],
-    });
+    const queryResponse = await withRetry(() =>
+      anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: queryPrompt }],
+      })
+    );
 
     let searchQueries: { query: string; sourceType: SourceType; modifier?: string }[] = [];
     const queryText = queryResponse.content[0].type === 'text' ? queryResponse.content[0].text : '';
@@ -727,8 +764,20 @@ Strategy guidance: ${strategy === 'translocate' ? 'Focus on unexpected connectio
     const paginatedSources = interleavedSources.slice(startIndex, startIndex + 20);
 
     return NextResponse.json({ sources: paginatedSources });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Discover API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const statusCode = error?.status || 500;
+
+    // Log error to database
+    await logError({
+      endpoint: '/api/discover',
+      errorType: error?.status === 429 ? 'rate_limit' : 'discover_error',
+      message: errorMessage,
+      statusCode,
+      requestData: { niche: body?.niche, sourceTypes: body?.sourceTypes, useModifiers: body?.useModifiers },
+    });
+
     return NextResponse.json(
       { error: 'Failed to discover sources' },
       { status: 500 }

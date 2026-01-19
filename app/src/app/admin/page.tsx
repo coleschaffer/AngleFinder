@@ -16,6 +16,8 @@ import {
   Download,
   Zap,
   Activity,
+  AlertTriangle,
+  Server,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -51,7 +53,29 @@ interface AnalyticsSummary {
   recentEvents: AnalyticsEvent[];
 }
 
-type Tab = 'feedback' | 'analytics';
+interface ErrorLogEntry {
+  id: string;
+  endpoint: string;
+  errorType: string;
+  message: string;
+  statusCode?: number;
+  requestData?: string;
+  timestamp: string;
+}
+
+interface ErrorStats {
+  total: number;
+  byEndpoint: Record<string, number>;
+  byErrorType: Record<string, number>;
+  last24h: number;
+}
+
+interface ErrorsData {
+  errors: ErrorLogEntry[];
+  stats: ErrorStats;
+}
+
+type Tab = 'feedback' | 'analytics' | 'errors';
 
 const awarenessConfig = {
   hidden: { label: 'Hidden', color: '#22C55E', Icon: EyeOff },
@@ -74,6 +98,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>('feedback');
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [errorsData, setErrorsData] = useState<ErrorsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadFeedback = async () => {
@@ -100,9 +125,21 @@ export default function AdminPage() {
     }
   };
 
+  const loadErrors = async () => {
+    try {
+      const response = await fetch('/api/errors');
+      if (response.ok) {
+        const data = await response.json();
+        setErrorsData(data);
+      }
+    } catch (error) {
+      console.error('Error loading errors:', error);
+    }
+  };
+
   const loadData = async () => {
     setIsLoading(true);
-    await Promise.all([loadFeedback(), loadAnalytics()]);
+    await Promise.all([loadFeedback(), loadAnalytics(), loadErrors()]);
     setIsLoading(false);
   };
 
@@ -148,6 +185,22 @@ export default function AdminPage() {
         }
       } catch (error) {
         console.error('Error clearing analytics:', error);
+      }
+    }
+  };
+
+  const clearAllErrors = async () => {
+    if (confirm('Are you sure you want to clear all error logs?')) {
+      try {
+        const response = await fetch('/api/errors', { method: 'DELETE' });
+        if (response.ok) {
+          setErrorsData({
+            errors: [],
+            stats: { total: 0, byEndpoint: {}, byErrorType: {}, last24h: 0 },
+          });
+        }
+      } catch (error) {
+        console.error('Error clearing error logs:', error);
       }
     }
   };
@@ -209,11 +262,155 @@ export default function AdminPage() {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('errors')}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'errors'
+                ? 'border-[var(--ca-gold)] text-[var(--ca-gold)]'
+                : 'border-transparent text-[var(--ca-gray-light)] hover:text-white'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            Errors
+            {errorsData && errorsData.stats.last24h > 0 && (
+              <span className="px-1.5 py-0.5 text-xs bg-red-500/20 text-red-400 rounded-full">
+                {errorsData.stats.last24h}
+              </span>
+            )}
+          </button>
         </div>
 
         {isLoading ? (
           <div className="text-center py-20">
             <p className="text-[var(--ca-gray-light)]">Loading...</p>
+          </div>
+        ) : activeTab === 'errors' ? (
+          /* Errors Tab */
+          <div>
+            {!errorsData || errorsData.stats.total === 0 ? (
+              <div className="text-center py-20">
+                <AlertTriangle className="w-12 h-12 text-[var(--ca-gray)] mx-auto mb-4" />
+                <p className="text-[var(--ca-gray-light)]">No errors logged yet</p>
+                <p className="text-sm text-[var(--ca-gray)] mt-1">
+                  API errors and failures will be tracked here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Error Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="card">
+                    <div className="text-2xl font-bold text-red-400">{errorsData.stats.total}</div>
+                    <div className="text-xs text-[var(--ca-gray-light)] mt-1">Total Errors</div>
+                  </div>
+                  <div className="card">
+                    <div className="text-2xl font-bold text-orange-400">{errorsData.stats.last24h}</div>
+                    <div className="text-xs text-[var(--ca-gray-light)] mt-1">Last 24 Hours</div>
+                  </div>
+                  <div className="card">
+                    <div className="text-2xl font-bold text-[var(--ca-gold)]">
+                      {Object.keys(errorsData.stats.byEndpoint).length}
+                    </div>
+                    <div className="text-xs text-[var(--ca-gray-light)] mt-1">Affected Endpoints</div>
+                  </div>
+                  <div className="card">
+                    <div className="text-2xl font-bold text-purple-400">
+                      {errorsData.stats.byErrorType['rate_limit'] || 0}
+                    </div>
+                    <div className="text-xs text-[var(--ca-gray-light)] mt-1">Rate Limit Errors</div>
+                  </div>
+                </div>
+
+                {/* Errors by Endpoint */}
+                {Object.keys(errorsData.stats.byEndpoint).length > 0 && (
+                  <div className="card">
+                    <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                      Errors by Endpoint
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(errorsData.stats.byEndpoint)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([endpoint, count]) => (
+                          <div key={endpoint} className="flex items-center justify-between bg-[var(--ca-gray-dark)] rounded-lg p-3">
+                            <div className="flex items-center gap-2">
+                              <Server className="w-4 h-4 text-[var(--ca-gray-light)]" />
+                              <span className="text-sm font-mono">{endpoint}</span>
+                            </div>
+                            <span className="text-red-400 font-medium">{count}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Errors */}
+                <div className="card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider">
+                      Recent Errors
+                    </h3>
+                    <button
+                      onClick={clearAllErrors}
+                      className="btn btn-ghost text-red-400 hover:bg-red-500/10 text-xs py-1 px-2"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Clear All
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                    {errorsData.errors.map((error) => (
+                      <details
+                        key={error.id}
+                        className="group bg-[var(--ca-gray-dark)]/50 rounded-lg"
+                      >
+                        <summary className="flex items-center justify-between p-3 cursor-pointer list-none hover:bg-[var(--ca-gray-dark)] rounded-lg transition-colors">
+                          <div className="flex items-center gap-3">
+                            <AlertTriangle className={`w-4 h-4 ${
+                              error.errorType === 'rate_limit' ? 'text-orange-400' : 'text-red-400'
+                            }`} />
+                            <div>
+                              <div className="text-sm font-mono">{error.endpoint}</div>
+                              <div className="flex items-center gap-2 text-xs text-[var(--ca-gray-light)]">
+                                <span className={`px-1.5 py-0.5 rounded ${
+                                  error.errorType === 'rate_limit'
+                                    ? 'bg-orange-500/20 text-orange-400'
+                                    : 'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {error.errorType}
+                                </span>
+                                {error.statusCode && (
+                                  <span>Status: {error.statusCode}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-[var(--ca-gray-light)]">
+                            {format(new Date(error.timestamp), 'MMM d · h:mm a')}
+                          </div>
+                        </summary>
+                        <div className="px-3 pb-3 pt-1 border-t border-[var(--ca-gray-dark)] space-y-2">
+                          <div>
+                            <p className="text-xs text-[var(--ca-gray-light)] mb-1">Message:</p>
+                            <p className="text-sm text-red-300 font-mono text-xs break-all">
+                              {error.message.slice(0, 500)}
+                              {error.message.length > 500 && '...'}
+                            </p>
+                          </div>
+                          {error.requestData && (
+                            <div>
+                              <p className="text-xs text-[var(--ca-gray-light)] mb-1">Request Data:</p>
+                              <pre className="text-xs text-[var(--ca-gray)] font-mono bg-[var(--ca-black)] p-2 rounded overflow-x-auto">
+                                {error.requestData}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : activeTab === 'feedback' ? (
           /* Feedback Tab */

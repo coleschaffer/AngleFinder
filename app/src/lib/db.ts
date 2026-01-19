@@ -200,3 +200,135 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
 export async function clearAllAnalytics(): Promise<void> {
   await pool.query('DELETE FROM analytics_events');
 }
+
+// ============================================
+// Error Logging Functions
+// ============================================
+
+export interface ErrorLogEntry {
+  id: string;
+  endpoint: string;
+  errorType: string;
+  message: string;
+  statusCode?: number;
+  requestData?: string;
+  timestamp: string;
+}
+
+export async function initErrorLogsTable() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS error_logs (
+        id UUID PRIMARY KEY,
+        endpoint VARCHAR(255) NOT NULL,
+        error_type VARCHAR(100) NOT NULL,
+        message TEXT NOT NULL,
+        status_code INTEGER,
+        request_data TEXT,
+        timestamp TIMESTAMP WITH TIME ZONE NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_error_logs_timestamp ON error_logs (timestamp);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_error_logs_endpoint ON error_logs (endpoint);
+    `);
+  } finally {
+    client.release();
+  }
+}
+
+export interface LogErrorInput {
+  endpoint: string;
+  errorType: string;
+  message: string;
+  statusCode?: number;
+  requestData?: Record<string, unknown>;
+}
+
+export async function logError(error: LogErrorInput): Promise<void> {
+  try {
+    await initErrorLogsTable();
+    const id = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO error_logs (id, endpoint, error_type, message, status_code, request_data, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        id,
+        error.endpoint,
+        error.errorType,
+        error.message.slice(0, 5000), // Limit message length
+        error.statusCode || null,
+        error.requestData ? JSON.stringify(error.requestData).slice(0, 5000) : null,
+        new Date().toISOString(),
+      ]
+    );
+  } catch (err) {
+    // Silent fail - don't let logging errors break the app
+    console.error('Failed to log error:', err);
+  }
+}
+
+export async function getRecentErrors(limit: number = 100): Promise<ErrorLogEntry[]> {
+  await initErrorLogsTable();
+  const result = await pool.query(
+    `SELECT id, endpoint, error_type as "errorType", message, status_code as "statusCode",
+            request_data as "requestData", timestamp
+     FROM error_logs
+     ORDER BY timestamp DESC
+     LIMIT $1`,
+    [limit]
+  );
+  return result.rows.map(row => ({
+    ...row,
+    timestamp: row.timestamp.toISOString(),
+  }));
+}
+
+export async function getErrorStats(): Promise<{
+  total: number;
+  byEndpoint: Record<string, number>;
+  byErrorType: Record<string, number>;
+  last24h: number;
+}> {
+  await initErrorLogsTable();
+
+  const totalResult = await pool.query('SELECT COUNT(*) as count FROM error_logs');
+  const total = parseInt(totalResult.rows[0].count, 10);
+
+  const byEndpointResult = await pool.query(`
+    SELECT endpoint, COUNT(*) as count
+    FROM error_logs
+    GROUP BY endpoint
+  `);
+  const byEndpoint: Record<string, number> = {};
+  byEndpointResult.rows.forEach((row: { endpoint: string; count: string }) => {
+    byEndpoint[row.endpoint] = parseInt(row.count, 10);
+  });
+
+  const byErrorTypeResult = await pool.query(`
+    SELECT error_type, COUNT(*) as count
+    FROM error_logs
+    GROUP BY error_type
+  `);
+  const byErrorType: Record<string, number> = {};
+  byErrorTypeResult.rows.forEach((row: { error_type: string; count: string }) => {
+    byErrorType[row.error_type] = parseInt(row.count, 10);
+  });
+
+  const last24hResult = await pool.query(`
+    SELECT COUNT(*) as count
+    FROM error_logs
+    WHERE timestamp > NOW() - INTERVAL '24 hours'
+  `);
+  const last24h = parseInt(last24hResult.rows[0].count, 10);
+
+  return { total, byEndpoint, byErrorType, last24h };
+}
+
+export async function clearAllErrors(): Promise<void> {
+  await pool.query('DELETE FROM error_logs');
+}
