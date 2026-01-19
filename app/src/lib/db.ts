@@ -22,7 +22,7 @@ export async function initDatabase() {
       )
     `);
 
-    // Analytics table for tracking Sweet Spot interactions
+    // Analytics table for tracking interactions
     await client.query(`
       CREATE TABLE IF NOT EXISTS analytics_events (
         id UUID PRIMARY KEY,
@@ -31,11 +31,17 @@ export async function initDatabase() {
         item_type VARCHAR(20) NOT NULL,
         awareness_level VARCHAR(20) NOT NULL,
         momentum_score INTEGER NOT NULL,
-        is_sweet_spot BOOLEAN NOT NULL,
+        is_sweet_spot BOOLEAN DEFAULT false,
         niche VARCHAR(100),
         source_type VARCHAR(50),
+        content TEXT,
         timestamp TIMESTAMP WITH TIME ZONE NOT NULL
       )
+    `);
+
+    // Add content column if it doesn't exist (migration for existing tables)
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS content TEXT
     `);
 
     // Create index for faster analytics queries
@@ -100,9 +106,9 @@ export interface AnalyticsEventInput {
   itemType: 'claim' | 'hook';
   awarenessLevel: AwarenessLevel;
   momentumScore: number;
-  isSweetSpot: boolean;
   niche?: string;
   sourceType?: SourceType;
+  content?: string;
 }
 
 export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<void> {
@@ -110,8 +116,8 @@ export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<v
   const id = crypto.randomUUID();
   await pool.query(
     `INSERT INTO analytics_events
-     (id, event_type, item_id, item_type, awareness_level, momentum_score, is_sweet_spot, niche, source_type, timestamp)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+     (id, event_type, item_id, item_type, awareness_level, momentum_score, is_sweet_spot, niche, source_type, content, timestamp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       id,
       event.eventType,
@@ -119,9 +125,10 @@ export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<v
       event.itemType,
       event.awarenessLevel,
       event.momentumScore,
-      event.isSweetSpot,
+      false, // is_sweet_spot - deprecated, always false
       event.niche || null,
       event.sourceType || null,
+      event.content || null,
       new Date().toISOString(),
     ]
   );
@@ -134,7 +141,6 @@ export interface AnalyticsSummary {
     emerging: number;
     known: number;
   };
-  sweetSpotRate: number;
   byEventType: Record<string, number>;
   recentEvents: AnalyticsEvent[];
 }
@@ -157,17 +163,6 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
     byAwarenessLevel[row.awareness_level as AwarenessLevel] = parseInt(row.count, 10);
   });
 
-  // Sweet spot rate
-  const sweetSpotResult = await pool.query(`
-    SELECT
-      COUNT(*) FILTER (WHERE is_sweet_spot = true) as sweet_spot_count,
-      COUNT(*) as total
-    FROM analytics_events
-  `);
-  const sweetSpotCount = parseInt(sweetSpotResult.rows[0].sweet_spot_count, 10);
-  const sweetSpotTotal = parseInt(sweetSpotResult.rows[0].total, 10);
-  const sweetSpotRate = sweetSpotTotal > 0 ? (sweetSpotCount / sweetSpotTotal) * 100 : 0;
-
   // By event type
   const eventTypeResult = await pool.query(`
     SELECT event_type, COUNT(*) as count
@@ -184,7 +179,7 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
     SELECT
       id, event_type as "eventType", item_id as "itemId", item_type as "itemType",
       awareness_level as "awarenessLevel", momentum_score as "momentumScore",
-      is_sweet_spot as "isSweetSpot", niche, source_type as "sourceType", timestamp
+      niche, source_type as "sourceType", content, timestamp
     FROM analytics_events
     ORDER BY timestamp DESC
     LIMIT 50
@@ -197,7 +192,6 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
   return {
     totalEvents,
     byAwarenessLevel,
-    sweetSpotRate,
     byEventType,
     recentEvents,
   };

@@ -107,9 +107,9 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
           itemType: 'hook',
           awarenessLevel,
           momentumScore,
-          isSweetSpot,
           niche: wizard?.customNiche || wizard?.niche,
           sourceType,
+          content: hook.headline,
         }),
       });
     } catch (error) {

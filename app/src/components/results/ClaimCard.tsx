@@ -99,9 +99,9 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
           itemType: 'claim',
           awarenessLevel,
           momentumScore,
-          isSweetSpot,
           niche: wizard.customNiche || wizard.niche,
           sourceType,
+          content: claim.claim,
         }),
       });
     } catch (error) {

@@ -34,9 +34,9 @@ interface AnalyticsEvent {
   itemType: 'claim' | 'hook';
   awarenessLevel: 'hidden' | 'emerging' | 'known';
   momentumScore: number;
-  isSweetSpot: boolean;
   niche: string;
   sourceType: string;
+  content?: string;
   timestamp: string;
 }
 
@@ -47,7 +47,6 @@ interface AnalyticsSummary {
     emerging: number;
     known: number;
   };
-  sweetSpotRate: number;
   byEventType: Record<string, number>;
   recentEvents: AnalyticsEvent[];
 }
@@ -143,7 +142,6 @@ export default function AdminPage() {
           setAnalytics({
             totalEvents: 0,
             byAwarenessLevel: { hidden: 0, emerging: 0, known: 0 },
-            sweetSpotRate: 0,
             byEventType: {},
             recentEvents: [],
           });
@@ -299,15 +297,6 @@ export default function AdminPage() {
                     <div className="text-xs text-[var(--ca-gray-light)] mt-1">Total Events</div>
                   </div>
                   <div className="card">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-[#22C55E]" />
-                      <span className="text-2xl font-bold text-[#22C55E]">
-                        {analytics.sweetSpotRate.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="text-xs text-[var(--ca-gray-light)] mt-1">Sweet Spot Rate</div>
-                  </div>
-                  <div className="card">
                     <div className="text-2xl font-bold text-[#22C55E]">{analytics.byAwarenessLevel.hidden}</div>
                     <div className="flex items-center gap-1 text-xs text-[var(--ca-gray-light)] mt-1">
                       <EyeOff className="w-3 h-3" />
@@ -319,6 +308,13 @@ export default function AdminPage() {
                     <div className="flex items-center gap-1 text-xs text-[var(--ca-gray-light)] mt-1">
                       <TrendingUp className="w-3 h-3" />
                       Emerging Ideas
+                    </div>
+                  </div>
+                  <div className="card">
+                    <div className="text-2xl font-bold text-[#EF4444]">{analytics.byAwarenessLevel.known}</div>
+                    <div className="flex items-center gap-1 text-xs text-[var(--ca-gray-light)] mt-1">
+                      <Eye className="w-3 h-3" />
+                      Known Ideas
                     </div>
                   </div>
                 </div>
@@ -394,7 +390,7 @@ export default function AdminPage() {
                       Clear All
                     </button>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
                     {analytics.recentEvents.map((event) => {
                       const config = awarenessConfig[event.awarenessLevel];
                       const eventConfig = eventTypeLabels[event.eventType] || { label: event.eventType, Icon: Activity };
@@ -402,37 +398,49 @@ export default function AdminPage() {
                       const LevelIcon = config.Icon;
 
                       return (
-                        <div
+                        <details
                           key={event.id}
-                          className="flex items-center justify-between p-2 bg-[var(--ca-gray-dark)]/50 rounded-lg"
+                          className="group bg-[var(--ca-gray-dark)]/50 rounded-lg"
                         >
-                          <div className="flex items-center gap-3">
-                            <EventIcon className="w-4 h-4 text-[var(--ca-gold)]" />
-                            <div>
-                              <div className="text-sm">{eventConfig.label}</div>
-                              <div className="flex items-center gap-2 text-xs text-[var(--ca-gray-light)]">
-                                <span className="capitalize">{event.itemType}</span>
-                                <span>·</span>
-                                <span className="flex items-center gap-1" style={{ color: config.color }}>
-                                  <LevelIcon className="w-3 h-3" />
-                                  {config.label}
-                                </span>
-                                {event.isSweetSpot && (
-                                  <>
-                                    <span>·</span>
-                                    <span className="flex items-center gap-1 text-[#22C55E]">
-                                      <Sparkles className="w-3 h-3" />
-                                      Sweet Spot
-                                    </span>
-                                  </>
-                                )}
+                          <summary className="flex items-center justify-between p-3 cursor-pointer list-none hover:bg-[var(--ca-gray-dark)] rounded-lg transition-colors">
+                            <div className="flex items-center gap-3">
+                              <EventIcon className="w-4 h-4 text-[var(--ca-gold)]" />
+                              <div>
+                                <div className="text-sm">{eventConfig.label}</div>
+                                <div className="flex items-center gap-2 text-xs text-[var(--ca-gray-light)]">
+                                  <span className="capitalize">{event.itemType}</span>
+                                  <span>·</span>
+                                  <span className="flex items-center gap-1" style={{ color: config.color }}>
+                                    <LevelIcon className="w-3 h-3" />
+                                    {config.label}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-xs text-[var(--ca-gray-light)]">
-                            {format(new Date(event.timestamp), 'MMM d · h:mm a')}
-                          </div>
-                        </div>
+                            <div className="text-xs text-[var(--ca-gray-light)]">
+                              {format(new Date(event.timestamp), 'MMM d · h:mm a')}
+                            </div>
+                          </summary>
+                          {event.content && (
+                            <div className="px-3 pb-3 pt-1 border-t border-[var(--ca-gray-dark)]">
+                              <p className="text-sm text-[var(--ca-gray-light)] italic">
+                                &ldquo;{event.content}&rdquo;
+                              </p>
+                              {event.niche && (
+                                <p className="text-xs text-[var(--ca-gray)] mt-2">
+                                  Niche: {event.niche}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          {!event.content && (
+                            <div className="px-3 pb-3 pt-1 border-t border-[var(--ca-gray-dark)]">
+                              <p className="text-xs text-[var(--ca-gray)]">
+                                Content not available (older event)
+                              </p>
+                            </div>
+                          )}
+                        </details>
                       );
                     })}
                   </div>

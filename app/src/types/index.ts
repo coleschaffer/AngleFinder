@@ -208,8 +208,8 @@ export interface AnalyticsEvent {
   itemType: 'claim' | 'hook';
   awarenessLevel: AwarenessLevel;
   momentumScore: number;
-  isSweetSpot: boolean;
   niche: string;
   sourceType: SourceType;
+  content?: string;
   timestamp: string;
 }
