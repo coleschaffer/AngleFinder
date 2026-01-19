@@ -103,8 +103,8 @@ export function Step7Results() {
   const [sortClaimsBy, setSortClaimsBy] = useState<'surprise' | 'momentum'>('surprise');
   const [filterAwareness, setFilterAwareness] = useState<AwarenessLevel | 'sweet-spot' | null>(null);
   const [filterBridge, setFilterBridge] = useState<'Aggressive' | 'Moderate' | 'Conservative' | null>(null);
-  const [filterSource, setFilterSource] = useState<string | null>(null);
-  const [filterHookSource, setFilterHookSource] = useState<string | null>(null);
+  const [filterSourceType, setFilterSourceType] = useState<SourceType | null>(null);
+  const [filterHookSourceType, setFilterHookSourceType] = useState<SourceType | null>(null);
   const [showHookSourceFilter, setShowHookSourceFilter] = useState(false);
 
   // Auto-save session on first load of results (only for new sessions)
@@ -168,26 +168,18 @@ export function Step7Results() {
     );
   }, [wizard.results]);
 
-  // Get unique sources for claims filter
-  const uniqueSources = useMemo(() => {
-    const sources = new Map<string, { name: string; type: SourceType }>();
-    allClaims.forEach(claim => {
-      if (!sources.has(claim.sourceName)) {
-        sources.set(claim.sourceName, { name: claim.sourceName, type: claim.sourceType });
-      }
-    });
-    return Array.from(sources.values());
+  // Get unique source types for claims filter
+  const claimSourceTypes = useMemo(() => {
+    const types = new Set<SourceType>();
+    allClaims.forEach(claim => types.add(claim.sourceType));
+    return Array.from(types);
   }, [allClaims]);
 
-  // Get unique sources for hooks filter
-  const uniqueHookSources = useMemo(() => {
-    const sources = new Map<string, { name: string; type: SourceType }>();
-    allHooks.forEach(hook => {
-      if (!sources.has(hook.sourceName)) {
-        sources.set(hook.sourceName, { name: hook.sourceName, type: hook.sourceType });
-      }
-    });
-    return Array.from(sources.values());
+  // Get unique source types for hooks filter
+  const hookSourceTypes = useMemo(() => {
+    const types = new Set<SourceType>();
+    allHooks.forEach(hook => types.add(hook.sourceType));
+    return Array.from(types);
   }, [allHooks]);
 
   // Filter and sort claims
@@ -201,9 +193,9 @@ export function Step7Results() {
       claims = claims.filter(c => c.awarenessLevel === filterAwareness);
     }
 
-    // Filter by source
-    if (filterSource) {
-      claims = claims.filter(c => c.sourceName === filterSource);
+    // Filter by source type
+    if (filterSourceType) {
+      claims = claims.filter(c => c.sourceType === filterSourceType);
     }
 
     // Sort
@@ -214,7 +206,7 @@ export function Step7Results() {
       return claims.sort((a, b) => (b.momentumScore || 0) - (a.momentumScore || 0));
     }
     return claims;
-  }, [allClaims, sortClaimsBy, filterAwareness, filterSource]);
+  }, [allClaims, sortClaimsBy, filterAwareness, filterSourceType]);
 
   // Filter hooks by angle type, awareness level, bridge distance, and source
   const filteredHooks = useMemo(() => {
@@ -237,13 +229,13 @@ export function Step7Results() {
       hooks = hooks.filter(h => h.bridgeDistance === filterBridge);
     }
 
-    // Filter by source
-    if (filterHookSource) {
-      hooks = hooks.filter(h => h.sourceName === filterHookSource);
+    // Filter by source type
+    if (filterHookSourceType) {
+      hooks = hooks.filter(h => h.sourceType === filterHookSourceType);
     }
 
     return hooks;
-  }, [allHooks, filterAngleType, filterAwareness, filterBridge, filterHookSource]);
+  }, [allHooks, filterAngleType, filterAwareness, filterBridge, filterHookSourceType]);
 
   // Sort hooks
   const sortedHooks = useMemo(() => {
@@ -739,48 +731,49 @@ export function Step7Results() {
             )}
           </div>
 
-          {/* Source Filter */}
+          {/* Source Type Filter */}
           <div className="relative">
             <button
               onClick={() => setShowHookSourceFilter(!showHookSourceFilter)}
-              className={`btn btn-secondary text-sm ${filterHookSource ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
+              className={`btn btn-secondary text-sm ${filterHookSourceType ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
             >
-              <BookOpen className="w-4 h-4" />
-              {filterHookSource ? (
-                <span className="max-w-32 truncate">{filterHookSource}</span>
+              {filterHookSourceType ? (
+                React.createElement(sourceTypeIcons[filterHookSourceType], { className: 'w-4 h-4' })
               ) : (
-                'All Sources'
+                <BookOpen className="w-4 h-4" />
               )}
+              {filterHookSourceType ? sourceTypeLabels[filterHookSourceType] : 'All Sources'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showHookSourceFilter && (
-              <div className="absolute top-full left-0 mt-2 w-64 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1 max-h-64 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-2 w-48 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1">
                 <button
                   onClick={() => {
-                    setFilterHookSource(null);
+                    setFilterHookSourceType(null);
                     setShowHookSourceFilter(false);
                   }}
-                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
-                    !filterHookSource ? 'text-[var(--ca-gold)]' : ''
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
+                    !filterHookSourceType ? 'text-[var(--ca-gold)]' : ''
                   }`}
                 >
+                  <BookOpen className="w-4 h-4" />
                   All Sources
                 </button>
-                {uniqueHookSources.map(source => {
-                  const Icon = sourceTypeIcons[source.type];
+                {hookSourceTypes.map(type => {
+                  const Icon = sourceTypeIcons[type];
                   return (
                     <button
-                      key={source.name}
+                      key={type}
                       onClick={() => {
-                        setFilterHookSource(source.name);
+                        setFilterHookSourceType(type);
                         setShowHookSourceFilter(false);
                       }}
                       className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
-                        filterHookSource === source.name ? 'text-[var(--ca-gold)]' : ''
+                        filterHookSourceType === type ? 'text-[var(--ca-gold)]' : ''
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">{source.name}</span>
+                      <Icon className="w-4 h-4" />
+                      {sourceTypeLabels[type]}
                     </button>
                   );
                 })}
@@ -872,48 +865,49 @@ export function Step7Results() {
             )}
           </div>
 
-          {/* Source Filter */}
+          {/* Source Type Filter */}
           <div className="relative">
             <button
               onClick={() => setShowSourceFilter(!showSourceFilter)}
-              className={`btn btn-secondary text-sm ${filterSource ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
+              className={`btn btn-secondary text-sm ${filterSourceType ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
             >
-              <BookOpen className="w-4 h-4" />
-              {filterSource ? (
-                <span className="max-w-32 truncate">{filterSource}</span>
+              {filterSourceType ? (
+                React.createElement(sourceTypeIcons[filterSourceType], { className: 'w-4 h-4' })
               ) : (
-                'All Sources'
+                <BookOpen className="w-4 h-4" />
               )}
+              {filterSourceType ? sourceTypeLabels[filterSourceType] : 'All Sources'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showSourceFilter && (
-              <div className="absolute top-full left-0 mt-2 w-64 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1 max-h-64 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-2 w-48 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1">
                 <button
                   onClick={() => {
-                    setFilterSource(null);
+                    setFilterSourceType(null);
                     setShowSourceFilter(false);
                   }}
-                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
-                    !filterSource ? 'text-[var(--ca-gold)]' : ''
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
+                    !filterSourceType ? 'text-[var(--ca-gold)]' : ''
                   }`}
                 >
+                  <BookOpen className="w-4 h-4" />
                   All Sources
                 </button>
-                {uniqueSources.map(source => {
-                  const Icon = sourceTypeIcons[source.type];
+                {claimSourceTypes.map(type => {
+                  const Icon = sourceTypeIcons[type];
                   return (
                     <button
-                      key={source.name}
+                      key={type}
                       onClick={() => {
-                        setFilterSource(source.name);
+                        setFilterSourceType(type);
                         setShowSourceFilter(false);
                       }}
                       className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
-                        filterSource === source.name ? 'text-[var(--ca-gold)]' : ''
+                        filterSourceType === type ? 'text-[var(--ca-gold)]' : ''
                       }`}
                     >
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">{source.name}</span>
+                      <Icon className="w-4 h-4" />
+                      {sourceTypeLabels[type]}
                     </button>
                   );
                 })}
