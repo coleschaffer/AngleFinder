@@ -104,6 +104,8 @@ export function Step7Results() {
   const [filterAwareness, setFilterAwareness] = useState<AwarenessLevel | 'sweet-spot' | null>(null);
   const [filterBridge, setFilterBridge] = useState<'Aggressive' | 'Moderate' | 'Conservative' | null>(null);
   const [filterSource, setFilterSource] = useState<string | null>(null);
+  const [filterHookSource, setFilterHookSource] = useState<string | null>(null);
+  const [showHookSourceFilter, setShowHookSourceFilter] = useState(false);
 
   // Auto-save session on first load of results (only for new sessions)
   useEffect(() => {
@@ -177,6 +179,17 @@ export function Step7Results() {
     return Array.from(sources.values());
   }, [allClaims]);
 
+  // Get unique sources for hooks filter
+  const uniqueHookSources = useMemo(() => {
+    const sources = new Map<string, { name: string; type: SourceType }>();
+    allHooks.forEach(hook => {
+      if (!sources.has(hook.sourceName)) {
+        sources.set(hook.sourceName, { name: hook.sourceName, type: hook.sourceType });
+      }
+    });
+    return Array.from(sources.values());
+  }, [allHooks]);
+
   // Filter and sort claims
   const sortedClaims = useMemo(() => {
     let claims = [...allClaims];
@@ -203,7 +216,7 @@ export function Step7Results() {
     return claims;
   }, [allClaims, sortClaimsBy, filterAwareness, filterSource]);
 
-  // Filter hooks by angle type, awareness level, and bridge distance
+  // Filter hooks by angle type, awareness level, bridge distance, and source
   const filteredHooks = useMemo(() => {
     let hooks = allHooks;
 
@@ -224,8 +237,13 @@ export function Step7Results() {
       hooks = hooks.filter(h => h.bridgeDistance === filterBridge);
     }
 
+    // Filter by source
+    if (filterHookSource) {
+      hooks = hooks.filter(h => h.sourceName === filterHookSource);
+    }
+
     return hooks;
-  }, [allHooks, filterAngleType, filterAwareness, filterBridge]);
+  }, [allHooks, filterAngleType, filterAwareness, filterBridge, filterHookSource]);
 
   // Sort hooks
   const bridgeDistanceOrder = { 'Aggressive': 0, 'Moderate': 1, 'Conservative': 2 };
@@ -721,6 +739,55 @@ export function Step7Results() {
                     {bridge}
                   </button>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Source Filter */}
+          <div className="relative">
+            <button
+              onClick={() => setShowHookSourceFilter(!showHookSourceFilter)}
+              className={`btn btn-secondary text-sm ${filterHookSource ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
+            >
+              <BookOpen className="w-4 h-4" />
+              {filterHookSource ? (
+                <span className="max-w-32 truncate">{filterHookSource}</span>
+              ) : (
+                'All Sources'
+              )}
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {showHookSourceFilter && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1 max-h-64 overflow-y-auto">
+                <button
+                  onClick={() => {
+                    setFilterHookSource(null);
+                    setShowHookSourceFilter(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] ${
+                    !filterHookSource ? 'text-[var(--ca-gold)]' : ''
+                  }`}
+                >
+                  All Sources
+                </button>
+                {uniqueHookSources.map(source => {
+                  const Icon = sourceTypeIcons[source.type];
+                  return (
+                    <button
+                      key={source.name}
+                      onClick={() => {
+                        setFilterHookSource(source.name);
+                        setShowHookSourceFilter(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
+                        filterHookSource === source.name ? 'text-[var(--ca-gold)]' : ''
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{source.name}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
