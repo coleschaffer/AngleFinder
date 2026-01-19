@@ -400,15 +400,6 @@ export function Step5Discovery() {
         </div>
       )}
 
-      {/* Tab Description */}
-      {hasSearched && !isSearching && activeTab === 'modified' && (
-        <div className="mb-4 p-3 bg-[var(--ca-gold)]/10 border border-[var(--ca-gold)]/20 rounded-lg">
-          <p className="text-xs text-[var(--ca-gold)]">
-            <Zap className="w-3.5 h-3.5 inline mr-1.5" />
-            Modified searches use Stefan&apos;s methodology—adding terms like &quot;Surprising,&quot; &quot;Breakthrough,&quot; and &quot;New Research&quot; to uncover hidden angles.
-          </p>
-        </div>
-      )}
 
       {/* Skeleton Loading */}
       {isSearching && (
@@ -451,12 +442,6 @@ export function Step5Discovery() {
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[var(--ca-gold)]" />
                   <span className="font-medium text-sm">Selected Sources ({selectedSourcesList.length})</span>
-                  {(preAnalyzedCount > 0 || analyzingCount > 0) && (
-                    <span className="text-xs text-[var(--ca-gray-light)]">
-                      • {preAnalyzedCount} pre-analyzed
-                      {analyzingCount > 0 && `, ${analyzingCount} analyzing`}
-                    </span>
-                  )}
                 </div>
                 {showSelectedSources ? (
                   <ChevronUp className="w-4 h-4 text-[var(--ca-gray-light)]" />
@@ -488,16 +473,6 @@ export function Step5Discovery() {
                           </a>
                           {source.modified && (
                             <Sparkles className="w-3 h-3 text-[var(--ca-gold)] flex-shrink-0" />
-                          )}
-                          {isPreAnalyzed && (
-                            <span title="Pre-analyzed">
-                              <Check className="w-3 h-3 text-green-500 flex-shrink-0" />
-                            </span>
-                          )}
-                          {isAnalyzing && (
-                            <span title="Analyzing...">
-                              <Loader2 className="w-3 h-3 text-[var(--ca-gold)] animate-spin flex-shrink-0" />
-                            </span>
                           )}
                         </div>
                         <button
@@ -556,7 +531,7 @@ export function Step5Discovery() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-[var(--ca-gray-light)]">
-                  {wizard.selectedSources.length} of {unmodifiedSources.length + modifiedSources.length} selected
+                  {wizard.selectedSources.filter(id => activeSourceList.some(s => s.id === id)).length} of {activeSourceList.length} selected
                 </span>
                 <button
                   onClick={selectAllSources}
@@ -637,18 +612,6 @@ export function Step5Discovery() {
                             by {source.author}
                           </span>
                         )}
-                        {isSelected && isPreAnalyzed && (
-                          <span className="text-xs text-green-400 flex items-center gap-1">
-                            <Check className="w-3 h-3" />
-                            Pre-analyzed
-                          </span>
-                        )}
-                        {isSelected && isAnalyzing && (
-                          <span className="text-xs text-[var(--ca-gold)] flex items-center gap-1">
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Analyzing...
-                          </span>
-                        )}
                       </div>
                     </div>
                     <a
@@ -723,17 +686,6 @@ export function Step5Discovery() {
         </>
       )}
 
-      {/* Analysis Note */}
-      {wizard.selectedSources.length > 3 && (
-        <div className="flex items-center gap-2 text-xs text-[var(--ca-gray-light)] mb-4 justify-center">
-          <Clock className="w-3.5 h-3.5" />
-          <span>
-            {preAnalyzedCount > 0
-              ? `${preAnalyzedCount} sources pre-analyzed — analysis will be faster!`
-              : 'Selecting more sources may result in longer analysis time'}
-          </span>
-        </div>
-      )}
 
       {/* Navigation */}
       <div className="flex justify-between">
@@ -747,9 +699,6 @@ export function Step5Discovery() {
           className="btn btn-primary"
         >
           Analyze {wizard.selectedSources.length} Source{wizard.selectedSources.length !== 1 ? 's' : ''}
-          {preAnalyzedCount > 0 && (
-            <span className="text-xs opacity-80">({preAnalyzedCount} ready)</span>
-          )}
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
