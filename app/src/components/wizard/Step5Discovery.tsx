@@ -88,6 +88,8 @@ export function Step5Discovery() {
   const backgroundQueue = useRef<Source[]>([]);
   const activeBackgroundCount = useRef(0);
   const BACKGROUND_CONCURRENCY_LIMIT = 6; // Max parallel background analyses
+  // Ref to hold latest processBackgroundQueue function (avoids stale closure in async callbacks)
+  const processQueueRef = useRef<() => void>(() => {});
 
   const getCategoryNames = () => {
     if (!wizard.niche || !wizard.strategy) return [];
@@ -103,7 +105,7 @@ export function Step5Discovery() {
   };
 
   // Process background queue - runs the actual analysis
-  const processBackgroundQueue = useCallback(async () => {
+  const processBackgroundQueue = useCallback(() => {
     // If we're at capacity or queue is empty, do nothing
     while (activeBackgroundCount.current < BACKGROUND_CONCURRENCY_LIMIT && backgroundQueue.current.length > 0) {
       const source = backgroundQueue.current.shift();
@@ -150,12 +152,17 @@ export function Step5Discovery() {
           removePendingAnalysis(source.id);
           abortControllers.current.delete(source.id);
           activeBackgroundCount.current--;
-          // Process next item in queue
-          processBackgroundQueue();
+          // Process next item in queue - use ref to get latest function (avoids stale closure)
+          processQueueRef.current();
         }
       })();
     }
   }, [wizard.productDescription, wizard.strategy, preAnalyzedResults, pendingAnalysis, addPendingAnalysis, removePendingAnalysis, addPreAnalyzedResult]);
+
+  // Keep ref updated with latest function
+  useEffect(() => {
+    processQueueRef.current = processBackgroundQueue;
+  }, [processBackgroundQueue]);
 
   // Queue a source for background analysis
   const queueBackgroundAnalysis = useCallback((source: Source) => {
