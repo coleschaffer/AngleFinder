@@ -447,9 +447,16 @@ async function searchPreprints(query: string): Promise<Source[]> {
 
     for (const server of servers) {
       try {
+        // Add 8 second timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         const response = await fetch(
-          `https://api.${server}.org/details/${server}/30d/0/json`
+          `https://api.${server}.org/details/${server}/30d/0/json`,
+          { signal: controller.signal }
         );
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) continue;
 
