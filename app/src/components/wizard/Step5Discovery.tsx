@@ -110,6 +110,8 @@ export function Step5Discovery() {
   // Process background queue - runs the actual analysis
   // Uses ref-based getters (isPendingAnalysis, getPreAnalyzedResult) to avoid stale state in async callbacks
   const processBackgroundQueue = useCallback(() => {
+    console.log(`[BG Queue] Processing - active: ${activeBackgroundCount.current}, queued: ${backgroundQueue.current.length}`);
+
     // If we're at capacity or queue is empty, do nothing
     while (activeBackgroundCount.current < BACKGROUND_CONCURRENCY_LIMIT && backgroundQueue.current.length > 0) {
       const source = backgroundQueue.current.shift();
@@ -117,6 +119,7 @@ export function Step5Discovery() {
 
       // Skip if already analyzed or in progress (use ref-based getters for current values)
       if (getPreAnalyzedResult(source.id) || isPendingAnalysis(source.id)) {
+        console.log(`[BG Queue] Skipping ${source.id} - already done or pending`);
         continue;
       }
 
@@ -124,6 +127,8 @@ export function Step5Discovery() {
       const controller = new AbortController();
       abortControllers.current.set(source.id, controller);
       addPendingAnalysis(source.id);
+
+      console.log(`[BG Queue] Starting analysis for ${source.id} (active: ${activeBackgroundCount.current})`);
 
       // Start the analysis (don't await - let it run in parallel)
       (async () => {
@@ -141,21 +146,23 @@ export function Step5Discovery() {
           });
 
           if (!response.ok) {
-            throw new Error('Analysis failed');
+            throw new Error(`Analysis failed with status ${response.status}`);
           }
 
           const result: AnalysisResult = await response.json();
           addPreAnalyzedResult(source.id, result);
+          console.log(`[BG Queue] Completed ${source.id} - ${result.claims.length} claims, ${result.hooks.length} hooks`);
         } catch (error: any) {
           if (error.name === 'AbortError') {
-            console.log(`Analysis cancelled for source: ${source.id}`);
+            console.log(`[BG Queue] Cancelled ${source.id}`);
           } else {
-            console.error('Background analysis error:', error);
+            console.error(`[BG Queue] Failed ${source.id}:`, error.message);
           }
         } finally {
           removePendingAnalysis(source.id);
           abortControllers.current.delete(source.id);
           activeBackgroundCount.current--;
+          console.log(`[BG Queue] Finished ${source.id}, active now: ${activeBackgroundCount.current}`);
           // Process next item in queue - use ref to get latest function (avoids stale closure)
           processQueueRef.current();
         }
@@ -172,12 +179,15 @@ export function Step5Discovery() {
   const queueBackgroundAnalysis = useCallback((source: Source) => {
     // Don't queue if already done, in progress, or already in queue (use ref-based getters)
     if (getPreAnalyzedResult(source.id) || isPendingAnalysis(source.id)) {
+      console.log(`[BG Queue] Not queuing ${source.id} - already done or pending`);
       return;
     }
     if (backgroundQueue.current.some(s => s.id === source.id)) {
+      console.log(`[BG Queue] Not queuing ${source.id} - already in queue`);
       return;
     }
 
+    console.log(`[BG Queue] Queuing ${source.id}`);
     backgroundQueue.current.push(source);
     processBackgroundQueue();
   }, [getPreAnalyzedResult, isPendingAnalysis, processBackgroundQueue]);
