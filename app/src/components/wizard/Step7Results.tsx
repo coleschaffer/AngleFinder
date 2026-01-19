@@ -246,14 +246,10 @@ export function Step7Results() {
   }, [allHooks, filterAngleType, filterAwareness, filterBridge, filterHookSource]);
 
   // Sort hooks
-  const bridgeDistanceOrder = { 'Aggressive': 0, 'Moderate': 1, 'Conservative': 2 };
   const sortedHooks = useMemo(() => {
     const hooks = [...filteredHooks];
     if (sortResultsBy === 'virality') {
       return hooks.sort((a, b) => b.viralityScore.total - a.viralityScore.total);
-    }
-    if (sortResultsBy === 'bridge') {
-      return hooks.sort((a, b) => bridgeDistanceOrder[a.bridgeDistance] - bridgeDistanceOrder[b.bridgeDistance]);
     }
     if (sortResultsBy === 'momentum') {
       return hooks.sort((a, b) => (b.momentumScore || 0) - (a.momentumScore || 0));
@@ -796,13 +792,12 @@ export function Step7Results() {
           <button
             onClick={() => {
               if (sortResultsBy === 'virality') setSortResultsBy('momentum');
-              else if (sortResultsBy === 'momentum') setSortResultsBy('bridge');
               else setSortResultsBy('virality');
             }}
             className="btn btn-secondary text-sm"
           >
             <ArrowUpDown className="w-4 h-4" />
-            Sort: {sortResultsBy === 'virality' ? 'Virality' : sortResultsBy === 'momentum' ? 'Momentum' : 'Bridge'}
+            Sort: {sortResultsBy === 'virality' ? 'Virality' : 'Momentum'}
           </button>
         </div>
       )}

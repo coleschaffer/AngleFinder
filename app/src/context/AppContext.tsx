@@ -81,8 +81,8 @@ interface AppContextType {
   setResultsView: (view: 'claims' | 'hooks' | 'generated' | 'favorites') => void;
   filterAngleType: string | null;
   setFilterAngleType: (type: string | null) => void;
-  sortResultsBy: 'virality' | 'bridge' | 'momentum';
-  setSortResultsBy: (sort: 'virality' | 'bridge' | 'momentum') => void;
+  sortResultsBy: 'virality' | 'momentum';
+  setSortResultsBy: (sort: 'virality' | 'momentum') => void;
 
   // Saved Product URLs
   savedProductURLs: SavedProductURL[];
@@ -147,7 +147,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [resultsView, setResultsView] = useState<'claims' | 'hooks' | 'generated' | 'favorites'>('hooks');
   const [filterAngleType, setFilterAngleType] = useState<string | null>(null);
-  const [sortResultsBy, setSortResultsBy] = useState<'virality' | 'bridge' | 'momentum'>('virality');
+  const [sortResultsBy, setSortResultsBy] = useState<'virality' | 'momentum'>('virality');
   const [savedProductURLs, setSavedProductURLs] = useLocalStorage<SavedProductURL[]>('angle-finder-saved-urls', []);
   const [generatedHooks, setGeneratedHooks] = useLocalStorage<Hook[]>('angle-finder-generated-hooks', []);
 
