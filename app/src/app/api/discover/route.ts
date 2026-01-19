@@ -491,9 +491,10 @@ async function searchPreprints(query: string): Promise<Source[]> {
 }
 
 export async function POST(request: NextRequest) {
+  let body: DiscoverRequest | null = null;
   try {
-    const body: DiscoverRequest = await request.json();
-    const { niche, product, strategy, categories, sourceTypes, page, useModifiers = false } = body;
+    body = await request.json();
+    const { niche, product, strategy, categories, sourceTypes, page, useModifiers = false } = body!;
 
     // If Reddit is selected, get targeted subreddits from Claude
     let targetSubreddits: string[] = [];

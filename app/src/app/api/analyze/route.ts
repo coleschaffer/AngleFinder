@@ -675,9 +675,10 @@ Return your response as valid JSON with this exact structure:
 }
 
 export async function POST(request: NextRequest) {
+  let body: AnalyzeRequest | null = null;
   try {
-    const body: AnalyzeRequest = await request.json();
-    const { source, niche, product, strategy } = body;
+    body = await request.json();
+    const { source, niche, product, strategy } = body!;
 
     console.log(`Analyzing source: ${source.id} (${source.type})`);
 
