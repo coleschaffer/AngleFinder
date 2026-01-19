@@ -370,13 +370,17 @@ async function searchArxiv(query: string): Promise<Source[]> {
     while ((match = entryRegex.exec(xml)) !== null) {
       const entryXml = match[1];
 
-      const idMatch = entryXml.match(/<id>http:\/\/arxiv\.org\/abs\/([\d.]+)(v\d+)?<\/id>/);
+      // Match both new format (YYMM.NNNNN) and old format (archive/YYMMNNN like hep-th/9901001)
+      const idMatch = entryXml.match(/<id>http:\/\/arxiv\.org\/abs\/([^\s<]+?)(v\d+)?<\/id>/);
       const titleMatch = entryXml.match(/<title>([\s\S]*?)<\/title>/);
       const summaryMatch = entryXml.match(/<summary>([\s\S]*?)<\/summary>/);
       const authorMatch = entryXml.match(/<author>[\s\S]*?<name>(.*?)<\/name>/);
       const publishedMatch = entryXml.match(/<published>(.*?)<\/published>/);
 
-      const arxivId = idMatch?.[1] || '';
+      const arxivId = idMatch?.[1]?.trim() || '';
+
+      // Skip entries without valid arXiv ID
+      if (!arxivId) continue;
       const title = titleMatch?.[1]?.replace(/\s+/g, ' ').trim() || 'Untitled';
       const abstract = summaryMatch?.[1]?.replace(/\s+/g, ' ').trim() || '';
 

@@ -35,6 +35,7 @@ interface AppContextType {
   toggleSourceSelection: (sourceId: string) => void;
   selectAllSources: () => void;
   deselectAllSources: () => void;
+  setSelectedSources: (sourceIds: string[]) => void;
   setIsAnalyzing: (isAnalyzing: boolean) => void;
   setAnalysisProgress: (progress: AnalysisProgress | null) => void;
   setResults: (results: AnalysisResult[]) => void;
@@ -231,6 +232,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deselectAllSources = useCallback(() => {
     setWizard(prev => ({ ...prev, selectedSources: [] }));
+  }, []);
+
+  const setSelectedSources = useCallback((sourceIds: string[]) => {
+    setWizard(prev => ({ ...prev, selectedSources: sourceIds }));
   }, []);
 
   const setIsAnalyzing = useCallback((isAnalyzing: boolean) => {
@@ -461,6 +466,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         toggleSourceSelection,
         selectAllSources,
         deselectAllSources,
+        setSelectedSources,
         setIsAnalyzing,
         setAnalysisProgress,
         setResults,

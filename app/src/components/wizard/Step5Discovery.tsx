@@ -58,8 +58,7 @@ export function Step5Discovery() {
     setDiscoveredSources,
     addDiscoveredSources,
     toggleSourceSelection,
-    selectAllSources,
-    deselectAllSources,
+    setSelectedSources,
     preAnalyzedResults,
     addPreAnalyzedResult,
     removePreAnalyzedResult,
@@ -205,71 +204,71 @@ export function Step5Discovery() {
 
   const handleSearch = async () => {
     setIsSearching(true);
+    setIsSearchingModified(true);
     setHasSearched(true);
     setPage(1);
+    setModifiedPage(1);
+
+    // Run both searches in parallel
+    const standardSearchPromise = fetch('/api/discover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        niche: getNicheName(),
+        product: wizard.productDescription,
+        strategy: wizard.strategy,
+        categories: getCategoryNames(),
+        sourceTypes: wizard.selectedSourceTypes,
+        page: 1,
+        useModifiers: false,
+      }),
+    });
+
+    const modifiedSearchPromise = fetch('/api/discover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        niche: getNicheName(),
+        product: wizard.productDescription,
+        strategy: wizard.strategy,
+        categories: getCategoryNames(),
+        sourceTypes: wizard.selectedSourceTypes,
+        page: 1,
+        useModifiers: true,
+      }),
+    });
 
     try {
-      const response = await fetch('/api/discover', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          niche: getNicheName(),
-          product: wizard.productDescription,
-          strategy: wizard.strategy,
-          categories: getCategoryNames(),
-          sourceTypes: wizard.selectedSourceTypes,
-          page: 1,
-          useModifiers: false,
-        }),
-      });
+      const [standardResponse, modifiedResponse] = await Promise.all([
+        standardSearchPromise,
+        modifiedSearchPromise,
+      ]);
 
-      if (!response.ok) throw new Error('Search failed');
+      let allSources: Source[] = [];
 
-      const data = await response.json();
-      // Mark these as unmodified sources
-      const unmodifiedSources = data.sources.map((s: Source) => ({
-        ...s,
-        modified: false,
-      }));
-      setDiscoveredSources(unmodifiedSources);
+      // Process standard results
+      if (standardResponse.ok) {
+        const standardData = await standardResponse.json();
+        const unmodifiedSources = standardData.sources.map((s: Source) => ({
+          ...s,
+          modified: false,
+        }));
+        allSources = [...unmodifiedSources];
+      }
+
+      // Process modified results
+      if (modifiedResponse.ok) {
+        const modifiedData = await modifiedResponse.json();
+        // Modified sources already have modified: true from API
+        allSources = [...allSources, ...modifiedData.sources];
+      }
+
+      setDiscoveredSources(allSources);
     } catch (error) {
       console.error('Search error:', error);
       setDiscoveredSources([]);
     } finally {
       setIsSearching(false);
-    }
-
-    // Also start the modified search in background
-    handleModifiedSearch();
-  };
-
-  const handleModifiedSearch = async () => {
-    setIsSearchingModified(true);
-    setModifiedPage(1);
-
-    try {
-      const response = await fetch('/api/discover', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          niche: getNicheName(),
-          product: wizard.productDescription,
-          strategy: wizard.strategy,
-          categories: getCategoryNames(),
-          sourceTypes: wizard.selectedSourceTypes,
-          page: 1,
-          useModifiers: true,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Modified search failed');
-
-      const data = await response.json();
-      // Add modified sources (they already have modified: true from API)
-      addDiscoveredSources(data.sources);
-    } catch (error) {
-      console.error('Modified search error:', error);
-    } finally {
       setIsSearchingModified(false);
     }
   };
@@ -393,9 +392,6 @@ export function Step5Discovery() {
           >
             <Sparkles className="w-4 h-4" />
             Modified ({modifiedSources.length})
-            {isSearchingModified && (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            )}
           </button>
         </div>
       )}
@@ -531,16 +527,28 @@ export function Step5Discovery() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-[var(--ca-gray-light)]">
-                  {wizard.selectedSources.filter(id => activeSourceList.some(s => s.id === id)).length} of {activeSourceList.length} selected
+                  {wizard.selectedSources.filter(id => availableSources.some(s => s.id === id)).length} of {availableSources.length} selected
                 </span>
                 <button
-                  onClick={selectAllSources}
+                  onClick={() => {
+                    // Select only visible sources (respects active tab AND filter)
+                    const visibleIds = availableSources.filter(s => !s.failed).map(s => s.id);
+                    // Merge with existing selections (keep sources from other tabs/filters)
+                    const newSelection = [...new Set([...wizard.selectedSources, ...visibleIds])];
+                    setSelectedSources(newSelection);
+                  }}
                   className="text-sm text-[var(--ca-gold)] hover:underline"
                 >
                   Select All
                 </button>
                 <button
-                  onClick={deselectAllSources}
+                  onClick={() => {
+                    // Deselect only visible sources (respects active tab AND filter)
+                    const visibleIds = new Set(availableSources.map(s => s.id));
+                    // Keep selections from other tabs/filters
+                    const newSelection = wizard.selectedSources.filter(id => !visibleIds.has(id));
+                    setSelectedSources(newSelection);
+                  }}
                   className="text-sm text-[var(--ca-gray-light)] hover:underline"
                 >
                   Deselect All
@@ -663,23 +671,13 @@ export function Step5Discovery() {
           )}
 
           {/* No Results */}
-          {availableSources.length === 0 && !isSearchingModified && (
+          {availableSources.length === 0 && (
             <div className="text-center py-12">
               <AlertCircle className="w-12 h-12 text-[var(--ca-gray)] mx-auto mb-4" />
               <p className="text-[var(--ca-gray-light)]">
                 {activeTab === 'modified'
-                  ? 'No modified sources found yet. Try the Standard tab or wait for the modified search to complete.'
+                  ? 'No modified sources found. Try the Standard tab.'
                   : 'No sources found. Try adjusting your search criteria.'}
-              </p>
-            </div>
-          )}
-
-          {/* Loading modified sources */}
-          {activeTab === 'modified' && isSearchingModified && availableSources.length === 0 && (
-            <div className="text-center py-12">
-              <Loader2 className="w-12 h-12 text-[var(--ca-gold)] mx-auto mb-4 animate-spin" />
-              <p className="text-[var(--ca-gray-light)]">
-                Searching with modifiers for hidden angles...
               </p>
             </div>
           )}
