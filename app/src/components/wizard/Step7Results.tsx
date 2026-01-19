@@ -101,7 +101,8 @@ export function Step7Results() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showInputsSummary, setShowInputsSummary] = useState(true);
   const [sortClaimsBy, setSortClaimsBy] = useState<'surprise' | 'momentum'>('surprise');
-  const [filterAwareness, setFilterAwareness] = useState<AwarenessLevel | null>(null);
+  const [filterHookAwareness, setFilterHookAwareness] = useState<AwarenessLevel | null>(null);
+  const [filterClaimAwareness, setFilterClaimAwareness] = useState<AwarenessLevel | null>(null);
   const [filterBridge, setFilterBridge] = useState<'Aggressive' | 'Moderate' | 'Conservative' | null>(null);
   const [filterSourceType, setFilterSourceType] = useState<SourceType | null>(null);
   const [filterHookSourceType, setFilterHookSourceType] = useState<SourceType | null>(null);
@@ -186,9 +187,9 @@ export function Step7Results() {
   const sortedClaims = useMemo(() => {
     let claims = [...allClaims];
 
-    // Filter by awareness level
-    if (filterAwareness) {
-      claims = claims.filter(c => c.awarenessLevel === filterAwareness);
+    // Filter by awareness level (claims use their own filter)
+    if (filterClaimAwareness) {
+      claims = claims.filter(c => c.awarenessLevel === filterClaimAwareness);
     }
 
     // Filter by source type
@@ -204,7 +205,7 @@ export function Step7Results() {
       return claims.sort((a, b) => (b.momentumScore || 0) - (a.momentumScore || 0));
     }
     return claims;
-  }, [allClaims, sortClaimsBy, filterAwareness, filterSourceType]);
+  }, [allClaims, sortClaimsBy, filterClaimAwareness, filterSourceType]);
 
   // Filter hooks by angle type, awareness level, bridge distance, and source
   const filteredHooks = useMemo(() => {
@@ -215,9 +216,9 @@ export function Step7Results() {
       hooks = hooks.filter(h => h.angleTypes.includes(filterAngleType as AngleType));
     }
 
-    // Filter by awareness level
-    if (filterAwareness) {
-      hooks = hooks.filter(h => h.awarenessLevel === filterAwareness);
+    // Filter by awareness level (hooks use their own filter)
+    if (filterHookAwareness) {
+      hooks = hooks.filter(h => h.awarenessLevel === filterHookAwareness);
     }
 
     // Filter by bridge distance
@@ -231,7 +232,7 @@ export function Step7Results() {
     }
 
     return hooks;
-  }, [allHooks, filterAngleType, filterAwareness, filterBridge, filterHookSourceType]);
+  }, [allHooks, filterAngleType, filterHookAwareness, filterBridge, filterHookSourceType]);
 
   // Sort hooks
   const sortedHooks = useMemo(() => {
@@ -582,10 +583,10 @@ export function Step7Results() {
           <div className="relative">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="btn btn-secondary text-sm"
+              className={`btn btn-secondary text-sm ${filterAngleType ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
             >
               <Filter className="w-4 h-4" />
-              {filterAngleType || 'All Angles'}
+              {filterAngleType || 'Angles'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showFilters && (
@@ -623,28 +624,28 @@ export function Step7Results() {
           <div className="relative">
             <button
               onClick={() => setShowAwarenessFilter(!showAwarenessFilter)}
-              className={`btn btn-secondary text-sm ${filterAwareness ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
+              className={`btn btn-secondary text-sm ${filterHookAwareness ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
             >
-              {filterAwareness ? (
-                React.createElement(awarenessConfig[filterAwareness].Icon, {
+              {filterHookAwareness ? (
+                React.createElement(awarenessConfig[filterHookAwareness].Icon, {
                   className: 'w-4 h-4',
-                  style: { color: awarenessConfig[filterAwareness].color }
+                  style: { color: awarenessConfig[filterHookAwareness].color }
                 })
               ) : (
                 <Activity className="w-4 h-4" />
               )}
-              {filterAwareness ? awarenessConfig[filterAwareness].label : 'Awareness'}
+              {filterHookAwareness ? awarenessConfig[filterHookAwareness].label : 'Awareness'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showAwarenessFilter && (
               <div className="absolute top-full left-0 mt-2 w-48 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1">
                 <button
                   onClick={() => {
-                    setFilterAwareness(null);
+                    setFilterHookAwareness(null);
                     setShowAwarenessFilter(false);
                   }}
                   className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
-                    !filterAwareness ? 'text-[var(--ca-gold)]' : ''
+                    !filterHookAwareness ? 'text-[var(--ca-gold)]' : ''
                   }`}
                 >
                   <Activity className="w-4 h-4" />
@@ -657,11 +658,11 @@ export function Step7Results() {
                     <button
                       key={level}
                       onClick={() => {
-                        setFilterAwareness(level);
+                        setFilterHookAwareness(level);
                         setShowAwarenessFilter(false);
                       }}
                       className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2`}
-                      style={{ color: filterAwareness === level ? config.color : undefined }}
+                      style={{ color: filterHookAwareness === level ? config.color : undefined }}
                     >
                       <LevelIcon className="w-4 h-4" style={{ color: config.color }} />
                       {config.label}
@@ -679,7 +680,7 @@ export function Step7Results() {
               className={`btn btn-secondary text-sm ${filterBridge ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
             >
               <Shuffle className="w-4 h-4" />
-              {filterBridge || 'All Bridges'}
+              {filterBridge || 'Bridges'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showBridgeFilter && (
@@ -724,7 +725,7 @@ export function Step7Results() {
               ) : (
                 <BookOpen className="w-4 h-4" />
               )}
-              {filterHookSourceType ? sourceTypeLabels[filterHookSourceType] : 'All Sources'}
+              {filterHookSourceType ? sourceTypeLabels[filterHookSourceType] : 'Sources'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showHookSourceFilter && (
@@ -784,28 +785,28 @@ export function Step7Results() {
           <div className="relative">
             <button
               onClick={() => setShowAwarenessFilter(!showAwarenessFilter)}
-              className={`btn btn-secondary text-sm ${filterAwareness ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
+              className={`btn btn-secondary text-sm ${filterClaimAwareness ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
             >
-              {filterAwareness ? (
-                React.createElement(awarenessConfig[filterAwareness].Icon, {
+              {filterClaimAwareness ? (
+                React.createElement(awarenessConfig[filterClaimAwareness].Icon, {
                   className: 'w-4 h-4',
-                  style: { color: awarenessConfig[filterAwareness].color }
+                  style: { color: awarenessConfig[filterClaimAwareness].color }
                 })
               ) : (
                 <Activity className="w-4 h-4" />
               )}
-              {filterAwareness ? awarenessConfig[filterAwareness].label : 'Awareness'}
+              {filterClaimAwareness ? awarenessConfig[filterClaimAwareness].label : 'Awareness'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showAwarenessFilter && (
               <div className="absolute top-full left-0 mt-2 w-48 bg-[var(--ca-dark)] border border-[var(--ca-gray)] rounded-lg shadow-xl z-10 py-1">
                 <button
                   onClick={() => {
-                    setFilterAwareness(null);
+                    setFilterClaimAwareness(null);
                     setShowAwarenessFilter(false);
                   }}
                   className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
-                    !filterAwareness ? 'text-[var(--ca-gold)]' : ''
+                    !filterClaimAwareness ? 'text-[var(--ca-gold)]' : ''
                   }`}
                 >
                   <Activity className="w-4 h-4" />
@@ -818,11 +819,11 @@ export function Step7Results() {
                     <button
                       key={level}
                       onClick={() => {
-                        setFilterAwareness(level);
+                        setFilterClaimAwareness(level);
                         setShowAwarenessFilter(false);
                       }}
                       className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2`}
-                      style={{ color: filterAwareness === level ? config.color : undefined }}
+                      style={{ color: filterClaimAwareness === level ? config.color : undefined }}
                     >
                       <LevelIcon className="w-4 h-4" style={{ color: config.color }} />
                       {config.label}
@@ -844,7 +845,7 @@ export function Step7Results() {
               ) : (
                 <BookOpen className="w-4 h-4" />
               )}
-              {filterSourceType ? sourceTypeLabels[filterSourceType] : 'All Sources'}
+              {filterSourceType ? sourceTypeLabels[filterSourceType] : 'Sources'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showSourceFilter && (

@@ -161,6 +161,39 @@ export function Step6Analysis() {
       const activeIds = new Set<string>();
       const executing = new Map<string, Promise<void>>();
 
+      // Helper to retry fetch on network errors
+      const fetchWithRetry = async (
+        url: string,
+        options: RequestInit,
+        maxRetries: number = 3
+      ): Promise<Response> => {
+        let lastError: Error | null = null;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          try {
+            const response = await fetch(url, options);
+            return response;
+          } catch (error: any) {
+            lastError = error;
+            // Check if it's a network error (TypeError: Failed to fetch)
+            const isNetworkError =
+              error instanceof TypeError &&
+              (error.message.includes('Failed to fetch') ||
+                error.message.includes('network') ||
+                error.message.includes('NetworkError'));
+
+            if (isNetworkError && attempt < maxRetries) {
+              // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+              const delay = Math.pow(2, attempt) * 1000;
+              console.log(`Network error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+            throw error;
+          }
+        }
+        throw lastError;
+      };
+
       const analyzeSource = async (source: Source) => {
         activeIds.add(source.id);
         setAnalyzingIds(new Set(activeIds));
@@ -175,7 +208,7 @@ export function Step6Analysis() {
         );
 
         try {
-          const response = await fetch('/api/analyze', {
+          const response = await fetchWithRetry('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
