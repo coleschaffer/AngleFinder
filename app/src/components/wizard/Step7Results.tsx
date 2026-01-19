@@ -101,7 +101,7 @@ export function Step7Results() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showInputsSummary, setShowInputsSummary] = useState(true);
   const [sortClaimsBy, setSortClaimsBy] = useState<'surprise' | 'momentum'>('surprise');
-  const [filterAwareness, setFilterAwareness] = useState<AwarenessLevel | 'sweet-spot' | null>(null);
+  const [filterAwareness, setFilterAwareness] = useState<AwarenessLevel | null>(null);
   const [filterBridge, setFilterBridge] = useState<'Aggressive' | 'Moderate' | 'Conservative' | null>(null);
   const [filterSourceType, setFilterSourceType] = useState<SourceType | null>(null);
   const [filterHookSourceType, setFilterHookSourceType] = useState<SourceType | null>(null);
@@ -187,9 +187,7 @@ export function Step7Results() {
     let claims = [...allClaims];
 
     // Filter by awareness level
-    if (filterAwareness === 'sweet-spot') {
-      claims = claims.filter(c => c.isSweetSpot || (c.awarenessLevel === 'hidden' && (c.momentumScore || 0) >= 7));
-    } else if (filterAwareness) {
+    if (filterAwareness) {
       claims = claims.filter(c => c.awarenessLevel === filterAwareness);
     }
 
@@ -218,9 +216,7 @@ export function Step7Results() {
     }
 
     // Filter by awareness level
-    if (filterAwareness === 'sweet-spot') {
-      hooks = hooks.filter(h => h.isSweetSpot || (h.awarenessLevel === 'hidden' && (h.momentumScore || 0) >= 7));
-    } else if (filterAwareness) {
+    if (filterAwareness) {
       hooks = hooks.filter(h => h.awarenessLevel === filterAwareness);
     }
 
@@ -629,9 +625,7 @@ export function Step7Results() {
               onClick={() => setShowAwarenessFilter(!showAwarenessFilter)}
               className={`btn btn-secondary text-sm ${filterAwareness ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
             >
-              {filterAwareness === 'sweet-spot' ? (
-                <Sparkles className="w-4 h-4 text-[#22C55E]" />
-              ) : filterAwareness ? (
+              {filterAwareness ? (
                 React.createElement(awarenessConfig[filterAwareness].Icon, {
                   className: 'w-4 h-4',
                   style: { color: awarenessConfig[filterAwareness].color }
@@ -639,7 +633,7 @@ export function Step7Results() {
               ) : (
                 <Activity className="w-4 h-4" />
               )}
-              {filterAwareness === 'sweet-spot' ? 'Sweet Spots' : filterAwareness ? awarenessConfig[filterAwareness].label : 'Awareness'}
+              {filterAwareness ? awarenessConfig[filterAwareness].label : 'Awareness'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showAwarenessFilter && (
@@ -655,18 +649,6 @@ export function Step7Results() {
                 >
                   <Activity className="w-4 h-4" />
                   All Levels
-                </button>
-                <button
-                  onClick={() => {
-                    setFilterAwareness('sweet-spot');
-                    setShowAwarenessFilter(false);
-                  }}
-                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
-                    filterAwareness === 'sweet-spot' ? 'text-[#22C55E]' : ''
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4 text-[#22C55E]" />
-                  Sweet Spots Only
                 </button>
                 {(['hidden', 'emerging', 'known'] as const).map(level => {
                   const config = awarenessConfig[level];
@@ -790,7 +772,7 @@ export function Step7Results() {
             className="btn btn-secondary text-sm"
           >
             <ArrowUpDown className="w-4 h-4" />
-            Sort: {sortResultsBy === 'virality' ? 'Virality' : 'Momentum'}
+            {sortResultsBy === 'virality' ? 'Virality' : 'Momentum'}
           </button>
         </div>
       )}
@@ -804,9 +786,7 @@ export function Step7Results() {
               onClick={() => setShowAwarenessFilter(!showAwarenessFilter)}
               className={`btn btn-secondary text-sm ${filterAwareness ? 'ring-1 ring-[var(--ca-gold)]' : ''}`}
             >
-              {filterAwareness === 'sweet-spot' ? (
-                <Sparkles className="w-4 h-4 text-[#22C55E]" />
-              ) : filterAwareness ? (
+              {filterAwareness ? (
                 React.createElement(awarenessConfig[filterAwareness].Icon, {
                   className: 'w-4 h-4',
                   style: { color: awarenessConfig[filterAwareness].color }
@@ -814,7 +794,7 @@ export function Step7Results() {
               ) : (
                 <Activity className="w-4 h-4" />
               )}
-              {filterAwareness === 'sweet-spot' ? 'Sweet Spots' : filterAwareness ? awarenessConfig[filterAwareness].label : 'Awareness'}
+              {filterAwareness ? awarenessConfig[filterAwareness].label : 'Awareness'}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showAwarenessFilter && (
@@ -830,18 +810,6 @@ export function Step7Results() {
                 >
                   <Activity className="w-4 h-4" />
                   All Levels
-                </button>
-                <button
-                  onClick={() => {
-                    setFilterAwareness('sweet-spot');
-                    setShowAwarenessFilter(false);
-                  }}
-                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--ca-gray-dark)] flex items-center gap-2 ${
-                    filterAwareness === 'sweet-spot' ? 'text-[#22C55E]' : ''
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4 text-[#22C55E]" />
-                  Sweet Spots Only
                 </button>
                 {(['hidden', 'emerging', 'known'] as const).map(level => {
                   const config = awarenessConfig[level];
@@ -924,7 +892,7 @@ export function Step7Results() {
             className="btn btn-secondary text-sm"
           >
             <ArrowUpDown className="w-4 h-4" />
-            Sort: {sortClaimsBy === 'surprise' ? 'Surprise Score' : 'Momentum'}
+            {sortClaimsBy === 'surprise' ? 'Surprise Score' : 'Momentum'}
           </button>
         </div>
       )}

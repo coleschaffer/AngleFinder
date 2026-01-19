@@ -206,18 +206,9 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
 
   return (
     <div
-      className={`card animate-slide-up cursor-pointer ${isSweetSpot ? 'ring-1 ring-[#22C55E]/50' : ''}`}
+      className="card animate-slide-up cursor-pointer"
       onClick={() => setIsExpanded(!isExpanded)}
     >
-      {/* Sweet Spot Badge */}
-      {isSweetSpot && (
-        <div className="flex items-center gap-1.5 mb-3 px-2.5 py-1.5 rounded-lg w-fit"
-          style={{ background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1))' }}>
-          <Sparkles className="w-3.5 h-3.5 text-[#22C55E]" />
-          <span className="text-xs font-semibold text-[#22C55E] uppercase tracking-wide">Sweet Spot</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex-1 min-w-0">
