@@ -16,6 +16,8 @@ export function Step6Analysis() {
     saveSession,
     preAnalyzedResults,
     clearPreAnalyzedResults,
+    isPendingAnalysis,
+    getPreAnalyzedResult,
   } = useApp();
 
   const [statusMessages, setStatusMessages] = useState<
@@ -42,20 +44,21 @@ export function Step6Analysis() {
       const sources = getSelectedSources();
       const allResults: AnalysisResult[] = [];
 
-      // Check which sources are already pre-analyzed vs need analysis
-      // Note: We don't wait for pending background analysis due to React closure issues
-      // Instead, we just start fresh analysis for anything not already complete
+      // Categorize sources: pre-analyzed, pending (background running), or needs fresh analysis
       const preAnalyzedSources: Source[] = [];
+      const pendingSources: Source[] = [];
       const needsAnalysis: Source[] = [];
 
       for (const source of sources) {
-        if (preAnalyzedResults.has(source.id)) {
+        // Use getter to get current value (not stale closure)
+        const existingResult = getPreAnalyzedResult(source.id);
+        if (existingResult) {
           preAnalyzedSources.push(source);
-          const result = preAnalyzedResults.get(source.id)!;
-          allResults.push(result);
+          allResults.push(existingResult);
+        } else if (isPendingAnalysis(source.id)) {
+          // Background analysis is in progress - we'll wait for it
+          pendingSources.push(source);
         } else {
-          // Whether pending in background or not, we'll analyze it fresh
-          // This avoids closure issues with polling stale state
           needsAnalysis.push(source);
         }
       }
@@ -63,19 +66,79 @@ export function Step6Analysis() {
       // Initialize status messages
       setStatusMessages([
         ...preAnalyzedSources.map(s => {
-          const result = preAnalyzedResults.get(s.id)!;
+          const result = getPreAnalyzedResult(s.id)!;
           return {
             id: s.id,
             message: `Pre-analyzed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
             status: 'pre-analyzed' as const,
           };
         }),
+        ...pendingSources.map(s => ({
+          id: s.id,
+          message: `Analyzing: ${s.title.slice(0, 50)}...`,
+          status: 'analyzing' as const,
+        })),
         ...needsAnalysis.map(s => ({
           id: s.id,
           message: `Queued: ${s.title.slice(0, 50)}...`,
           status: 'pending' as const,
         })),
       ]);
+
+      // Wait for pending background analysis to complete
+      // Uses getter functions to always get current values (no stale closures)
+      for (const source of pendingSources) {
+        // Poll until background analysis completes or fails
+        let completed = false;
+        let attempts = 0;
+        const maxAttempts = 120; // 60 seconds max wait (500ms * 120)
+
+        while (!completed && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          attempts++;
+
+          // Check if completed (use getter for current value)
+          const result = getPreAnalyzedResult(source.id);
+          if (result) {
+            allResults.push(result);
+            setStatusMessages(prev =>
+              prev.map(s =>
+                s.id === source.id
+                  ? {
+                      ...s,
+                      message: `Pre-analyzed: ${result.claims.length} claims, ${result.hooks.length} hooks`,
+                      status: 'pre-analyzed' as const,
+                    }
+                  : s
+              )
+            );
+            completed = true;
+          } else if (!isPendingAnalysis(source.id)) {
+            // No longer pending but no result = failed, add to needsAnalysis
+            needsAnalysis.push(source);
+            setStatusMessages(prev =>
+              prev.map(s =>
+                s.id === source.id
+                  ? { ...s, message: `Queued: ${source.title.slice(0, 50)}...`, status: 'pending' as const }
+                  : s
+              )
+            );
+            completed = true;
+          }
+        }
+
+        // Timeout - add to fresh analysis queue
+        if (!completed) {
+          needsAnalysis.push(source);
+          setStatusMessages(prev =>
+            prev.map(s =>
+              s.id === source.id
+                ? { ...s, message: `Queued: ${source.title.slice(0, 50)}...`, status: 'pending' as const }
+                : s
+            )
+          );
+        }
+      }
 
       // If all sources were pre-analyzed, skip to results
       if (needsAnalysis.length === 0) {

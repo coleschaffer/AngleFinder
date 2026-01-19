@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import {
   Niche,
   SourceStrategy,
@@ -50,6 +50,9 @@ interface AppContextType {
   pendingAnalysis: Set<string>;
   addPendingAnalysis: (sourceId: string) => void;
   removePendingAnalysis: (sourceId: string) => void;
+  // Getter functions that always return current values (for polling in async code)
+  isPendingAnalysis: (sourceId: string) => boolean;
+  getPreAnalyzedResult: (sourceId: string) => AnalysisResult | undefined;
 
   // Sessions/History
   sessions: Session[];
@@ -118,6 +121,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Pre-analysis state for background processing
   const [preAnalyzedResults, setPreAnalyzedResults] = useState<Map<string, AnalysisResult>>(new Map());
   const [pendingAnalysis, setPendingAnalysis] = useState<Set<string>>(new Set());
+
+  // Refs that mirror state for use in async polling (avoids stale closure issues)
+  const preAnalyzedResultsRef = useRef<Map<string, AnalysisResult>>(new Map());
+  const pendingAnalysisRef = useRef<Set<string>>(new Set());
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    preAnalyzedResultsRef.current = preAnalyzedResults;
+  }, [preAnalyzedResults]);
+
+  useEffect(() => {
+    pendingAnalysisRef.current = pendingAnalysis;
+  }, [pendingAnalysis]);
 
   const [customCategories, setCustomCategories] = useLocalStorage<SourceCategory[]>('angle-finder-custom-categories', [], {
     // Migration: convert old object format to new array format
@@ -300,12 +316,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWizard(initialWizardState);
     setCurrentSession(null);
     // Clear pre-analysis state on wizard reset
+    preAnalyzedResultsRef.current = new Map();
+    pendingAnalysisRef.current = new Set();
     setPreAnalyzedResults(new Map());
     setPendingAnalysis(new Set());
   }, []);
 
   // Pre-analysis management (background processing)
   const addPreAnalyzedResult = useCallback((sourceId: string, result: AnalysisResult) => {
+    // Update ref immediately for sync access
+    preAnalyzedResultsRef.current.set(sourceId, result);
     setPreAnalyzedResults(prev => {
       const newMap = new Map(prev);
       newMap.set(sourceId, result);
@@ -314,6 +334,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removePreAnalyzedResult = useCallback((sourceId: string) => {
+    preAnalyzedResultsRef.current.delete(sourceId);
     setPreAnalyzedResults(prev => {
       const newMap = new Map(prev);
       newMap.delete(sourceId);
@@ -322,10 +343,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearPreAnalyzedResults = useCallback(() => {
+    preAnalyzedResultsRef.current = new Map();
     setPreAnalyzedResults(new Map());
   }, []);
 
   const addPendingAnalysis = useCallback((sourceId: string) => {
+    pendingAnalysisRef.current.add(sourceId);
     setPendingAnalysis(prev => {
       const newSet = new Set(prev);
       newSet.add(sourceId);
@@ -334,11 +357,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removePendingAnalysis = useCallback((sourceId: string) => {
+    pendingAnalysisRef.current.delete(sourceId);
     setPendingAnalysis(prev => {
       const newSet = new Set(prev);
       newSet.delete(sourceId);
       return newSet;
     });
+  }, []);
+
+  // Getter functions that always return current values (for async polling)
+  const isPendingAnalysis = useCallback((sourceId: string) => {
+    return pendingAnalysisRef.current.has(sourceId);
+  }, []);
+
+  const getPreAnalyzedResult = useCallback((sourceId: string) => {
+    return preAnalyzedResultsRef.current.get(sourceId);
   }, []);
 
   // Session management
@@ -479,6 +512,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         pendingAnalysis,
         addPendingAnalysis,
         removePendingAnalysis,
+        isPendingAnalysis,
+        getPreAnalyzedResult,
         sessions,
         currentSession,
         saveSession,
