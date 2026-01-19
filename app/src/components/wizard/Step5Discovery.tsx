@@ -107,6 +107,39 @@ export function Step5Discovery() {
     return NICHES.find(n => n.id === wizard.niche)?.name || '';
   };
 
+  // Helper to retry fetch on network errors
+  const fetchWithRetry = async (
+    url: string,
+    options: RequestInit,
+    maxRetries: number = 3
+  ): Promise<Response> => {
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, options);
+        return response;
+      } catch (error: any) {
+        lastError = error;
+        // Check if it's a network error (TypeError: Failed to fetch)
+        const isNetworkError =
+          error instanceof TypeError &&
+          (error.message.includes('Failed to fetch') ||
+            error.message.includes('network') ||
+            error.message.includes('NetworkError'));
+
+        if (isNetworkError && attempt < maxRetries) {
+          // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`[BG Queue] Network error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError;
+  };
+
   // Process background queue - runs the actual analysis
   // Uses ref-based getters (isPendingAnalysis, getPreAnalyzedResult) to avoid stale state in async callbacks
   const processBackgroundQueue = useCallback(() => {
@@ -133,7 +166,7 @@ export function Step5Discovery() {
       // Start the analysis (don't await - let it run in parallel)
       (async () => {
         try {
-          const response = await fetch('/api/analyze', {
+          const response = await fetchWithRetry('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
