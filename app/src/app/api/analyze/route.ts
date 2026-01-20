@@ -372,6 +372,17 @@ function getAcademicContent(source: Source): string | null {
   return parts.length > 0 ? parts.join('\n') : null;
 }
 
+// Sanitize content by removing control characters that break JSON parsing
+function sanitizeContent(text: string): string {
+  // Remove ASCII control characters (0x00-0x1F) except for common whitespace
+  // Keep: tab (0x09), newline (0x0A), carriage return (0x0D)
+  // Remove: null, bell, backspace, form feed, vertical tab, etc.
+  return text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars
+    .replace(/\uFFFD/g, '') // Remove replacement character
+    .replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width chars
+}
+
 // Main analysis function using Claude with prompt caching
 async function analyzeContent(
   content: string,
@@ -380,6 +391,8 @@ async function analyzeContent(
   product: string,
   strategy: string
 ): Promise<{ claims: Claim[]; hooks: Hook[] }> {
+  // Sanitize content to prevent JSON parsing issues
+  const cleanContent = sanitizeContent(content);
   // Determine source type priors for awareness classification
   const sourceTypePrior = {
     arxiv: 'hidden',
@@ -405,7 +418,7 @@ PRODUCT DESCRIPTION: ${product}
 STRATEGY: ${strategy === 'translocate' ? 'Find UNEXPECTED connections from this unrelated content' : 'Find DIRECT applications to this niche'}
 
 CONTENT TO ANALYZE:
-${content.slice(0, 15000)}
+${cleanContent.slice(0, 15000)}
 
 ---
 
