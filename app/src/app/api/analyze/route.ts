@@ -386,9 +386,9 @@ function getAcademicContent(source: Source): string | null {
 function sanitizeContent(text: string): string {
   // Remove ASCII control characters (0x00-0x1F) except for common whitespace
   // Keep: tab (0x09), newline (0x0A), carriage return (0x0D)
-  // Remove: null, bell, backspace, form feed, vertical tab, etc.
+  // Remove: null, bell, backspace, form feed, vertical tab, DEL, C1 control codes, etc.
   return text
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\x80-\x9F]/g, '') // Remove ASCII + C1 control chars
     .replace(/\uFFFD/g, '') // Remove replacement character
     .replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-width chars
 }
@@ -527,16 +527,20 @@ Return your response as valid JSON with this exact structure:
 
   const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
 
+  // Sanitize Claude's response to remove any control characters before parsing
+  // Belt and suspenders - catches anything that slipped through input sanitization
+  const cleanResponseText = sanitizeContent(responseText);
+
   // Parse JSON from response with repair logic
-  if (!responseText.includes('{')) {
+  if (!cleanResponseText.includes('{')) {
     throw new AnalysisParseError('No JSON object found in response', responseText);
   }
 
   let parsed;
   try {
-    parsed = repairAndParseJSON(responseText);
+    parsed = repairAndParseJSON(cleanResponseText);
   } catch (parseError) {
-    // Include raw response in error for debugging
+    // Include raw response in error for debugging (original, not sanitized, for diagnosis)
     const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
     throw new AnalysisParseError(errorMsg, responseText);
   }
