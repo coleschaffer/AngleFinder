@@ -18,6 +18,13 @@ import {
   Activity,
   AlertTriangle,
   Server,
+  Gauge,
+  Clock,
+  Users,
+  Database,
+  Cpu,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -75,7 +82,59 @@ interface ErrorsData {
   stats: ErrorStats;
 }
 
-type Tab = 'feedback' | 'analytics' | 'errors';
+interface UsageEntry {
+  id: string;
+  endpoint: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  totalTokens: number;
+  requestDurationMs: number;
+  apiKeyUsed: 'primary' | 'secondary';
+  wasRateLimited: boolean;
+  sessionId?: string;
+  timestamp: string;
+}
+
+interface UsageSummary {
+  currentHour: {
+    totalRequests: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalCacheReadTokens: number;
+    totalCacheCreationTokens: number;
+    avgRequestDuration: number;
+    rateLimitedRequests: number;
+    byEndpoint: Record<string, number>;
+    byModel: Record<string, { requests: number; inputTokens: number; outputTokens: number }>;
+  };
+  last24Hours: {
+    totalRequests: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalCacheReadTokens: number;
+    rateLimitedRequests: number;
+    requestsPerHour: { hour: string; requests: number; tokens: number }[];
+  };
+  allTime: {
+    totalRequests: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalCacheReadTokens: number;
+    totalCacheCreationTokens: number;
+  };
+  activeSessions: number;
+  rateLimits: {
+    primaryKeyUsage: number;
+    secondaryKeyUsage: number;
+    rateLimitHitsLast24h: number;
+  };
+  recentRequests: UsageEntry[];
+}
+
+type Tab = 'feedback' | 'analytics' | 'errors' | 'usage';
 
 const awarenessConfig = {
   hidden: { label: 'Hidden', color: '#22C55E', Icon: EyeOff },
@@ -99,6 +158,7 @@ export default function AdminPage() {
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [errorsData, setErrorsData] = useState<ErrorsData | null>(null);
+  const [usageData, setUsageData] = useState<UsageSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadFeedback = async () => {
@@ -137,9 +197,21 @@ export default function AdminPage() {
     }
   };
 
+  const loadUsage = async () => {
+    try {
+      const response = await fetch('/api/usage');
+      if (response.ok) {
+        const data = await response.json();
+        setUsageData(data);
+      }
+    } catch (error) {
+      console.error('Error loading usage:', error);
+    }
+  };
+
   const loadData = async () => {
     setIsLoading(true);
-    await Promise.all([loadFeedback(), loadAnalytics(), loadErrors()]);
+    await Promise.all([loadFeedback(), loadAnalytics(), loadErrors(), loadUsage()]);
     setIsLoading(false);
   };
 
@@ -203,6 +275,33 @@ export default function AdminPage() {
         console.error('Error clearing error logs:', error);
       }
     }
+  };
+
+  const clearAllUsage = async () => {
+    if (confirm('Are you sure you want to clear all usage data?')) {
+      try {
+        const response = await fetch('/api/usage', { method: 'DELETE' });
+        if (response.ok) {
+          setUsageData(null);
+          loadUsage();
+        }
+      } catch (error) {
+        console.error('Error clearing usage data:', error);
+      }
+    }
+  };
+
+  // Format token counts for display
+  const formatTokens = (tokens: number): string => {
+    if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`;
+    if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}K`;
+    return tokens.toString();
+  };
+
+  // Format duration for display
+  const formatDuration = (ms: number): string => {
+    if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${ms}ms`;
   };
 
   return (
@@ -278,11 +377,285 @@ export default function AdminPage() {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('usage')}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'usage'
+                ? 'border-[var(--ca-gold)] text-[var(--ca-gold)]'
+                : 'border-transparent text-[var(--ca-gray-light)] hover:text-white'
+            }`}
+          >
+            <Gauge className="w-4 h-4" />
+            Usage
+            {usageData && usageData.activeSessions > 0 && (
+              <span className="px-1.5 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-full">
+                {usageData.activeSessions} active
+              </span>
+            )}
+          </button>
         </div>
 
         {isLoading ? (
           <div className="text-center py-20">
             <p className="text-[var(--ca-gray-light)]">Loading...</p>
+          </div>
+        ) : activeTab === 'usage' ? (
+          /* Usage Tab */
+          <div>
+            {!usageData || usageData.allTime.totalRequests === 0 ? (
+              <div className="text-center py-20">
+                <Gauge className="w-12 h-12 text-[var(--ca-gray)] mx-auto mb-4" />
+                <p className="text-[var(--ca-gray-light)]">No usage data yet</p>
+                <p className="text-sm text-[var(--ca-gray)] mt-1">
+                  API requests and token usage will be tracked here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Real-time Status */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-4 h-4 text-green-400" />
+                      <span className="text-xs text-[var(--ca-gray-light)]">Active Sessions</span>
+                    </div>
+                    <div className="text-2xl font-bold text-green-400">{usageData.activeSessions}</div>
+                    <div className="text-xs text-[var(--ca-gray)] mt-1">Last 15 min</div>
+                  </div>
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="w-4 h-4 text-[var(--ca-gold)]" />
+                      <span className="text-xs text-[var(--ca-gray-light)]">Requests/Hour</span>
+                    </div>
+                    <div className="text-2xl font-bold text-[var(--ca-gold)]">{usageData.currentHour.totalRequests}</div>
+                    <div className="text-xs text-[var(--ca-gray)] mt-1">Current hour</div>
+                  </div>
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-blue-400" />
+                      <span className="text-xs text-[var(--ca-gray-light)]">Avg Duration</span>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-400">{formatDuration(usageData.currentHour.avgRequestDuration)}</div>
+                    <div className="text-xs text-[var(--ca-gray)] mt-1">Per request</div>
+                  </div>
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-orange-400" />
+                      <span className="text-xs text-[var(--ca-gray-light)]">Rate Limits</span>
+                    </div>
+                    <div className="text-2xl font-bold text-orange-400">{usageData.rateLimits.rateLimitHitsLast24h}</div>
+                    <div className="text-xs text-[var(--ca-gray)] mt-1">Last 24h</div>
+                  </div>
+                </div>
+
+                {/* Token Usage - Current Hour */}
+                <div className="card">
+                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                    Token Usage (Current Hour)
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ArrowUpRight className="w-4 h-4 text-blue-400" />
+                        <span className="text-xs text-[var(--ca-gray-light)]">Input Tokens</span>
+                      </div>
+                      <div className="text-xl font-bold">{formatTokens(usageData.currentHour.totalInputTokens)}</div>
+                    </div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ArrowDownRight className="w-4 h-4 text-green-400" />
+                        <span className="text-xs text-[var(--ca-gray-light)]">Output Tokens</span>
+                      </div>
+                      <div className="text-xl font-bold">{formatTokens(usageData.currentHour.totalOutputTokens)}</div>
+                    </div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Database className="w-4 h-4 text-purple-400" />
+                        <span className="text-xs text-[var(--ca-gray-light)]">Cache Read</span>
+                      </div>
+                      <div className="text-xl font-bold">{formatTokens(usageData.currentHour.totalCacheReadTokens)}</div>
+                    </div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Zap className="w-4 h-4 text-yellow-400" />
+                        <span className="text-xs text-[var(--ca-gray-light)]">Cache Created</span>
+                      </div>
+                      <div className="text-xl font-bold">{formatTokens(usageData.currentHour.totalCacheCreationTokens)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* API Key Usage */}
+                <div className="card">
+                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                    API Key Distribution (Current Hour)
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Primary Key (Tier 4)</span>
+                        <span className="text-[var(--ca-gold)] font-bold">{usageData.rateLimits.primaryKeyUsage}</span>
+                      </div>
+                      <div className="h-2 bg-[var(--ca-black)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[var(--ca-gold)] rounded-full"
+                          style={{
+                            width: `${Math.min(100, (usageData.rateLimits.primaryKeyUsage / 200) * 100)}%`
+                          }}
+                        />
+                      </div>
+                      <div className="text-xs text-[var(--ca-gray)] mt-1">Target: ~200 req/min capacity</div>
+                    </div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Secondary Key (Tier 2)</span>
+                        <span className="text-purple-400 font-bold">{usageData.rateLimits.secondaryKeyUsage}</span>
+                      </div>
+                      <div className="h-2 bg-[var(--ca-black)] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-400 rounded-full"
+                          style={{
+                            width: `${Math.min(100, (usageData.rateLimits.secondaryKeyUsage / 45) * 100)}%`
+                          }}
+                        />
+                      </div>
+                      <div className="text-xs text-[var(--ca-gray)] mt-1">Target: ~45 req/min capacity</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Requests by Endpoint */}
+                {Object.keys(usageData.currentHour.byEndpoint).length > 0 && (
+                  <div className="card">
+                    <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                      Requests by Endpoint (Current Hour)
+                    </h3>
+                    <div className="space-y-2">
+                      {Object.entries(usageData.currentHour.byEndpoint)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([endpoint, count]) => (
+                          <div key={endpoint} className="flex items-center justify-between bg-[var(--ca-gray-dark)] rounded-lg p-3">
+                            <div className="flex items-center gap-2">
+                              <Server className="w-4 h-4 text-[var(--ca-gray-light)]" />
+                              <span className="text-sm font-mono">{endpoint}</span>
+                            </div>
+                            <span className="text-[var(--ca-gold)] font-medium">{count}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 24 Hour Summary */}
+                <div className="card">
+                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                    Last 24 Hours Summary
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-[var(--ca-gold)]">{usageData.last24Hours.totalRequests}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Total Requests</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-400">{formatTokens(usageData.last24Hours.totalInputTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Input Tokens</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-400">{formatTokens(usageData.last24Hours.totalOutputTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Output Tokens</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-400">{formatTokens(usageData.last24Hours.totalCacheReadTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Hits</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* All Time Stats */}
+                <div className="card">
+                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                    All Time Statistics
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="text-center">
+                      <div className="text-xl font-bold">{usageData.allTime.totalRequests.toLocaleString()}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Total Requests</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold">{formatTokens(usageData.allTime.totalInputTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Input Tokens</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold">{formatTokens(usageData.allTime.totalOutputTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Output Tokens</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold">{formatTokens(usageData.allTime.totalCacheReadTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Read</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold">{formatTokens(usageData.allTime.totalCacheCreationTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Created</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Requests */}
+                <div className="card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider">
+                      Recent Requests
+                    </h3>
+                    <button
+                      onClick={clearAllUsage}
+                      className="btn btn-ghost text-red-400 hover:bg-red-500/10 text-xs py-1 px-2"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Clear All
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {usageData.recentRequests.map((request) => (
+                      <div
+                        key={request.id}
+                        className="flex items-center justify-between bg-[var(--ca-gray-dark)]/50 rounded-lg p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Cpu className="w-4 h-4 text-[var(--ca-gray-light)]" />
+                          <div>
+                            <div className="text-sm font-mono">{request.endpoint}</div>
+                            <div className="flex items-center gap-2 text-xs text-[var(--ca-gray-light)]">
+                              <span>{request.model}</span>
+                              <span>·</span>
+                              <span>{formatTokens(request.inputTokens)} in / {formatTokens(request.outputTokens)} out</span>
+                              {request.cacheReadTokens > 0 && (
+                                <>
+                                  <span>·</span>
+                                  <span className="text-purple-400">{formatTokens(request.cacheReadTokens)} cached</span>
+                                </>
+                              )}
+                              {request.wasRateLimited && (
+                                <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+                                  Rate Limited
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-[var(--ca-gray-light)]">
+                            {format(new Date(request.timestamp), 'h:mm:ss a')}
+                          </div>
+                          <div className="text-xs text-[var(--ca-gray)]">
+                            {formatDuration(request.requestDurationMs)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : activeTab === 'errors' ? (
           /* Errors Tab */

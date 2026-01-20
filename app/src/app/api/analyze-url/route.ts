@@ -135,12 +135,14 @@ Return ONLY valid JSON in this exact format:
   "productDescription": "2-3 sentence description of the product for marketing purposes"
 }`;
 
-    const message = await withRetry((client) =>
-      client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 512,
-        messages: [{ role: 'user', content: analysisPrompt }],
-      })
+    const message = await withRetry(
+      (client) =>
+        client.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 512,
+          messages: [{ role: 'user', content: analysisPrompt }],
+        }),
+      { endpoint: '/api/analyze-url' }
     );
 
     // Parse Claude's response

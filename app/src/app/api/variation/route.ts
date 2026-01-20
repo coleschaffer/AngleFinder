@@ -47,12 +47,14 @@ Return your response as valid JSON with this exact structure:
   "sampleAdOpener": "string (3-4 sentences)"
 }`;
 
-    const response = await withRetry((client) =>
-      client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2048,
-        messages: [{ role: 'user', content: prompt }],
-      })
+    const response = await withRetry(
+      (client) =>
+        client.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2048,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      { endpoint: '/api/variation' }
     );
 
     const responseText = response.content[0].type === 'text' ? response.content[0].text : '';

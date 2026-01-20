@@ -489,12 +489,14 @@ Focus on:
 - Avoid meme/low-quality subreddits`;
 
       try {
-        const subredditResponse = await withRetry((client) =>
-          client.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 256,
-            messages: [{ role: 'user', content: subredditPrompt }],
-          })
+        const subredditResponse = await withRetry(
+          (client) =>
+            client.messages.create({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 256,
+              messages: [{ role: 'user', content: subredditPrompt }],
+            }),
+          { endpoint: '/api/discover (subreddits)' }
         );
 
         const subredditText = subredditResponse.content[0].type === 'text' ? subredditResponse.content[0].text : '';
@@ -544,12 +546,14 @@ Guidelines for each source type:
 
 Strategy guidance: ${strategy === 'translocate' ? 'Focus on unexpected connections from unrelated fields that could provide surprising marketing angles' : 'Focus on cutting-edge research and expert insights directly about this topic'}`;
 
-    const queryResponse = await withRetry((client) =>
-      client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        messages: [{ role: 'user', content: queryPrompt }],
-      })
+    const queryResponse = await withRetry(
+      (client) =>
+        client.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: queryPrompt }],
+        }),
+      { endpoint: '/api/discover (queries)' }
     );
 
     let searchQueries: { query: string; sourceType: SourceType; modifier?: string }[] = [];

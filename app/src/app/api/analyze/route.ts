@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Supadata } from '@supadata/js';
 import { Source, AnalysisResult, Claim, Hook, ViralityScore, BridgeDistance, AngleType, AwarenessLevel } from '@/types';
 import { logError } from '@/lib/db';
-import { withRetry } from '@/lib/anthropic';
+import { withRetry, ANALYSIS_SYSTEM_PROMPT } from '@/lib/anthropic';
 
 // Initialize Supadata client for YouTube transcripts
 const supadata = process.env.SUPADATA_API_KEY
@@ -372,7 +372,7 @@ function getAcademicContent(source: Source): string | null {
   return parts.length > 0 ? parts.join('\n') : null;
 }
 
-// Main analysis function using Claude
+// Main analysis function using Claude with prompt caching
 async function analyzeContent(
   content: string,
   source: Source,
@@ -392,13 +392,13 @@ async function analyzeContent(
     reddit: source.engagement && source.engagement > 10000 ? 'emerging' : 'hidden',
   }[source.type] || 'emerging';
 
-  const analysisPrompt = `You are an expert marketing strategist trained in Stefan Georgi's "Breakthrough Ideas" framework. Analyze the following content and extract marketing angles.
-
-CONTENT SOURCE: ${source.title}
+  // Dynamic user message (changes per request)
+  const userMessage = `CONTENT SOURCE: ${source.title}
 SOURCE TYPE: ${source.type}
 SOURCE URL: ${source.url}
 ${source.views ? `VIEWS/ENGAGEMENT: ${source.views}` : ''}
 ${source.publishDate ? `PUBLISH DATE: ${source.publishDate}` : ''}
+SOURCE TYPE PRIOR: This source type (${source.type}) has a baseline prior of "${sourceTypePrior}".
 
 NICHE: ${niche}
 PRODUCT DESCRIPTION: ${product}
@@ -406,55 +406,6 @@ STRATEGY: ${strategy === 'translocate' ? 'Find UNEXPECTED connections from this 
 
 CONTENT TO ANALYZE:
 ${content.slice(0, 15000)}
-
----
-
-STEFAN GEORGI'S FRAMEWORK:
-
-Big Idea Criteria:
-1. Emotionally Compelling - Hits a deep desire or fear
-2. Contains Built-In Intrigue - Creates an open loop
-3. Easily Understood - Can be grasped in seconds
-4. Believable (but surprising) - Novel yet credible
-5. Difficult to Steal - Tied to specific mechanism
-
-Angle Types to consider:
-- Hidden Cause: A secret reason behind a problem
-- Deficiency: Something missing that explains the problem
-- Contamination: Something harmful causing the problem
-- Timing/Method: Wrong approach or timing
-- Differentiation: Why this solution is unique
-- Identity: Tied to who the person is/wants to be
-- Contrarian: Challenges conventional wisdom
-
----
-
-SWEET SPOT CLASSIFICATION (Stefan's "Hidden → Emerging" Framework):
-
-For EVERY claim AND hook, you must classify the AWARENESS LEVEL:
-
-AWARENESS LEVELS:
-- "hidden": This concept/mechanism is NOT widely known. It's only discussed in academic circles, specialist communities, or very niche content. The average consumer in the target market has NEVER heard of this. No major brands are using this angle. This source type (${source.type}) has a baseline prior of "${sourceTypePrior}".
-
-- "emerging": This concept is STARTING to gain traction. It may appear in some wellness blogs, popular podcasts, or recent mainstream articles, but isn't saturated yet. A few marketers/brands might be starting to use it.
-
-- "known": This concept is WIDELY KNOWN. Consumers are aware of it, many brands use it, it appears in mainstream media regularly. Wikipedia probably has a page on it. Examples: probiotics, intermittent fasting, collagen, etc.
-
-MOMENTUM SCORE (1-10):
-Evaluate how much evidence there is that this idea is gaining traction:
-- 8-10 (Strong): Multiple recent studies (within 2 years), growing news coverage, multiple independent sources discussing it
-- 5-7 (Moderate): 1-2 recent studies or findings, found in multiple niche sources
-- 1-4 (Weak): Single source, older study, no corroborating evidence, not gaining traction
-
-MOMENTUM SIGNALS:
-List specific evidence points supporting momentum, e.g.:
-- "Study published in [year]"
-- "Discussed in multiple podcast episodes"
-- "Recently covered by [News Source]"
-- "No mainstream coverage found"
-- "Growing interest in biohacking community"
-
-THE "SWEET SPOT": Hidden ideas with momentum score >= 7 are "Sweet Spots" - these are primed to leap from hidden to emerging and are the most valuable.
 
 ---
 
@@ -533,12 +484,22 @@ Return your response as valid JSON with this exact structure:
   ]
 }`;
 
-  const response = await withRetry((client) =>
-    client.messages.create({
-      model: 'claude-sonnet-4-20250514', // Using Sonnet for cost efficiency, can switch to Opus
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: analysisPrompt }],
-    })
+  // Use prompt caching: system prompt is cached, user message is dynamic
+  const response = await withRetry(
+    (client) =>
+      client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        system: [
+          {
+            type: 'text',
+            text: ANALYSIS_SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    { endpoint: '/api/analyze' }
   );
 
   const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
