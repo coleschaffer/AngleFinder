@@ -4,6 +4,16 @@ import { Source, AnalysisResult, Claim, Hook, ViralityScore, BridgeDistance, Ang
 import { logError, getCachedContent, setCachedContent } from '@/lib/db';
 import { withRetry, ANALYSIS_SYSTEM_PROMPT } from '@/lib/anthropic';
 
+// Custom error class to include raw response for debugging
+class AnalysisParseError extends Error {
+  rawResponse: string;
+  constructor(message: string, rawResponse: string) {
+    super(message);
+    this.name = 'AnalysisParseError';
+    this.rawResponse = rawResponse;
+  }
+}
+
 // Initialize Supadata client for YouTube transcripts
 const supadata = process.env.SUPADATA_API_KEY
   ? new Supadata({ apiKey: process.env.SUPADATA_API_KEY })
@@ -519,10 +529,17 @@ Return your response as valid JSON with this exact structure:
 
   // Parse JSON from response with repair logic
   if (!responseText.includes('{')) {
-    throw new Error('No JSON object found in response');
+    throw new AnalysisParseError('No JSON object found in response', responseText);
   }
 
-  const parsed = repairAndParseJSON(responseText);
+  let parsed;
+  try {
+    parsed = repairAndParseJSON(responseText);
+  } catch (parseError) {
+    // Include raw response in error for debugging
+    const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+    throw new AnalysisParseError(errorMsg, responseText);
+  }
 
   // Validate the parsed structure
   if (!parsed.claims || !Array.isArray(parsed.claims)) {
@@ -704,13 +721,32 @@ Based on this title and your knowledge of this topic, provide an analysis as if 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const statusCode = error?.status || 500;
 
+    // Build request data with optional raw response for parse errors
+    const requestData: Record<string, unknown> = {
+      sourceId: body?.source?.id,
+      sourceType: body?.source?.type,
+    };
+
+    // If this is a parse error, include the raw Claude response for debugging
+    if (error instanceof AnalysisParseError) {
+      // Include first 2000 chars of raw response to see what Claude returned
+      requestData.rawResponse = error.rawResponse.slice(0, 2000);
+      // Also show what's around position 22
+      if (error.rawResponse.length > 30) {
+        requestData.position22Context = {
+          chars10to30: error.rawResponse.slice(10, 30),
+          charCodes10to30: Array.from(error.rawResponse.slice(10, 30)).map(c => c.charCodeAt(0)),
+        };
+      }
+    }
+
     // Log error to database
     await logError({
       endpoint: '/api/analyze',
       errorType: error?.status === 429 ? 'rate_limit' : 'analysis_error',
       message: errorMessage,
       statusCode,
-      requestData: { sourceId: body?.source?.id, sourceType: body?.source?.type },
+      requestData,
     });
 
     return NextResponse.json(

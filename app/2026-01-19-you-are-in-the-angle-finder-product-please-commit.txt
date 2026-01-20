@@ -1,0 +1,1782 @@
+                                                                                
+╭─── Claude Code v2.1.12 ──────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Cole!                 │ started                 │
+│                                                    │ Run /init to create a … │
+│                      ▗ ▗   ▖ ▖                     │ ─────────────────────── │
+│                                                    │ Recent activity         │
+│                        ▘▘ ▝▝                       │ No recent activity      │
+│                                                    │                         │
+│ Opus 4.5 · Claude Max · coleschaffer6@gmail.com's  │                         │
+│ Organization                                       │                         │
+│      ~/Desktop/Stefan Georgi Angle Finder/app      │                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+══════════════════ Conversation compacted · ctrl+o for history ═════════════════
+  ⎿  Read src/app/api/generate-hook/route.ts (136 lines)                        
+  ⎿  Referenced file src/app/api/analyze/route.ts                               
+  ⎿  Referenced file src/app/admin/page.tsx                                     
+  ⎿  Read src/app/api/usage/route.ts (31 lines)                                 
+  ⎿  Read src/lib/anthropic.ts (244 lines)                                      
+  ⎿  Todo list read (8 items)                                                   
+                                                                                
+⏺ I'll continue updating the remaining API routes to track usage. Let me read   
+  and update the variation, discover, and analyze-url routes.                   
+                                                                                
+⏺ Read(src/app/api/variation/route.ts)                                          
+  ⎿  Read 112 lines                                                             
+                                                                                
+⏺ Read(src/app/api/discover/route.ts)                                           
+  ⎿  Read 762 lines                                                             
+                                                                                
+⏺ Read(src/app/api/analyze-url/route.ts)                                        
+  ⎿  Read 172 lines                                                             
+                                                                                
+⏺ Now I'll update these three routes to pass the endpoint option to withRetry   
+  for usage tracking.                                                           
+                                                                                
+⏺ Update(src/app/api/variation/route.ts)                                        
+  ⎿  Added 8 lines, removed 6 lines                                             
+      47    "sampleAdOpener": "string (3-4 sentences)"                          
+      48  }`;                                                                   
+      49                                                                        
+      50 -    const response = await withRetry((client) =>                      
+      51 -      client.messages.create({                                        
+      52 -        model: 'claude-sonnet-4-20250514',                            
+      53 -        max_tokens: 2048,                                             
+      54 -        messages: [{ role: 'user', content: prompt }],                
+      55 -      })                                                              
+      50 +    const response = await withRetry(                                 
+      51 +      (client) =>                                                     
+      52 +        client.messages.create({                                      
+      53 +          model: 'claude-sonnet-4-20250514',                          
+      54 +          max_tokens: 2048,                                           
+      55 +          messages: [{ role: 'user', content: prompt }],              
+      56 +        }),                                                           
+      57 +      { endpoint: '/api/variation' }                                  
+      58      );                                                                
+      59                                                                        
+      60      const responseText = response.content[0].type === 'text' ?        
+          response.content[0].text : '';                                        
+                                                                                
+⏺ Update(src/app/api/discover/route.ts)                                         
+  ⎿  Added 8 lines, removed 6 lines                                             
+      489  - Avoid meme/low-quality subreddits`;                                
+      490                                                                       
+      491        try {                                                          
+      492 -        const subredditResponse = await withRetry((client) =>        
+      493 -          client.messages.create({                                   
+      494 -            model: 'claude-sonnet-4-20250514',                       
+      495 -            max_tokens: 256,                                         
+      496 -            messages: [{ role: 'user', content: subredditPromp       
+          -t }],                                                                
+      497 -          })                                                         
+      492 +        const subredditResponse = await withRetry(                   
+      493 +          (client) =>                                                
+      494 +            client.messages.create({                                 
+      495 +              model: 'claude-sonnet-4-20250514',                     
+      496 +              max_tokens: 256,                                       
+      497 +              messages: [{ role: 'user', content: subredditPro       
+          +mpt }],                                                              
+      498 +            }),                                                      
+      499 +          { endpoint: '/api/discover (subreddits)' }                 
+      500          );                                                           
+      501                                                                       
+      502          const subredditText = subredditResponse.content[0].typ       
+           e === 'text' ? subredditResponse.content[0].text : '';               
+                                                                                
+⏺ Update(src/app/api/discover/route.ts)                                         
+  ⎿  Added 8 lines, removed 6 lines                                             
+      546                                                                       
+      547  Strategy guidance: ${strategy === 'translocate' ? 'Focus on un       
+           expected connections from unrelated fields that could provide        
+           surprising marketing angles' : 'Focus on cutting-edge research       
+            and expert insights directly about this topic'}`;                   
+      548                                                                       
+      549 -    const queryResponse = await withRetry((client) =>                
+      550 -      client.messages.create({                                       
+      551 -        model: 'claude-sonnet-4-20250514',                           
+      552 -        max_tokens: 1024,                                            
+      553 -        messages: [{ role: 'user', content: queryPrompt }],          
+      554 -      })                                                             
+      549 +    const queryResponse = await withRetry(                           
+      550 +      (client) =>                                                    
+      551 +        client.messages.create({                                     
+      552 +          model: 'claude-sonnet-4-20250514',                         
+      553 +          max_tokens: 1024,                                          
+      554 +          messages: [{ role: 'user', content: queryPrompt }],        
+      555 +        }),                                                          
+      556 +      { endpoint: '/api/discover (queries)' }                        
+      557      );                                                               
+      558                                                                       
+      559      let searchQueries: { query: string; sourceType: SourceType       
+           ; modifier?: string }[] = [];                                        
+                                                                                
+⏺ Update(src/app/api/analyze-url/route.ts)                                      
+  ⎿  Added 8 lines, removed 6 lines                                             
+      135    "productDescription": "2-3 sentence description of the produ       
+           ct for marketing purposes"                                           
+      136  }`;                                                                  
+      137                                                                       
+      138 -    const message = await withRetry((client) =>                      
+      139 -      client.messages.create({                                       
+      140 -        model: 'claude-sonnet-4-20250514',                           
+      141 -        max_tokens: 512,                                             
+      142 -        messages: [{ role: 'user', content: analysisPrompt }],       
+      143 -      })                                                             
+      138 +    const message = await withRetry(                                 
+      139 +      (client) =>                                                    
+      140 +        client.messages.create({                                     
+      141 +          model: 'claude-sonnet-4-20250514',                         
+      142 +          max_tokens: 512,                                           
+      143 +          messages: [{ role: 'user', content: analysisPrompt }       
+          +],                                                                   
+      144 +        }),                                                          
+      145 +      { endpoint: '/api/analyze-url' }                               
+      146      );                                                               
+      147                                                                       
+      148      // Parse Claude's response                                       
+                                                                                
+⏺ All API routes are now updated with usage tracking. Let me update the todo    
+  list and run the build to verify everything compiles.                         
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && npm  
+      run build 2>&1 | head -100)                                               
+  ⎿  > app@0.1.0 build                                                          
+     > next build                                                               
+     … +43 lines (ctrl+o to expand)                                             
+                                                                                
+⏺ The build succeeded. Let me finalize the todos.                               
+                                                                                
+⏺ All tasks complete. Here's a summary of what was implemented:                 
+                                                                                
+  Usage Tab & Prompt Caching - Implementation Complete                          
+                                                                                
+  Usage Tracking System                                                         
+                                                                                
+  - Database Layer (/lib/db.ts): Added api_usage table with tracking for tokens,
+   duration, rate limits, API key used                                          
+  - Tracking Functions: trackUsage() records each API call, getUsageSummary()   
+  aggregates data                                                               
+  - API Endpoint (/api/usage): GET for fetching usage data, DELETE for clearing 
+                                                                                
+  Updated API Routes (all now track usage)                                      
+                                                                                
+  - /api/analyze - Added prompt caching + usage tracking                        
+  - /api/generate-hook - Usage tracking                                         
+  - /api/variation - Usage tracking                                             
+  - /api/discover - Usage tracking for both subreddit and query calls           
+  - /api/analyze-url - Usage tracking                                           
+                                                                                
+  Prompt Caching                                                                
+                                                                                
+  - Implemented on /api/analyze route using cache_control: { type: 'ephemeral' }
+   on the static system prompt                                                  
+  - The static ANALYSIS_SYSTEM_PROMPT in anthropic.ts gets cached, reducing     
+  input tokens on subsequent calls                                              
+  - Dynamic content (niche, product, categories, transcript) is not cached as   
+  expected                                                                      
+                                                                                
+  Admin Dashboard Usage Tab                                                     
+                                                                                
+  - Real-time stats: active sessions, requests/hour, avg duration, rate limits  
+  - Token breakdown: input, output, cache read, cache creation tokens           
+  - API key distribution (primary vs secondary usage)                           
+  - Requests by endpoint                                                        
+  - 24-hour and all-time summaries                                              
+  - Recent requests list                                                        
+                                                                                
+  The build compiles successfully. Would you like me to commit and push these   
+  changes?                                                                      
+                                                                                
+✻ Crunched for 10m 27s                                                          
+                                                                                
+❯ Yes please                                                                    
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      status)                                                                   
+  ⎿  On branch main                                                             
+     Your branch is up to date with 'origin/main'.                              
+     … +17 lines (ctrl+o to expand)                                             
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      diff --stat)                                                              
+  ⎿  app/src/app/admin/page.tsx             | 377 +++++++++++++++++++++++++     
+    +++++++-                                                                    
+     app/src/app/api/analyze-url/route.ts   |  14 +-                            
+    … +8 lines (ctrl+o to expand)                                               
+                                                                                
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      log --oneline -5)                                                         
+  ⎿  4969e69 Fix debounce losing selected sources during rapid selection        
+     91ca46e Add network error retry to background pre-analysis                 
+     3e7b17f Add console logging to debug background pre-analysis queue         
+     … +2 lines (ctrl+o to expand)                                              
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      add src/app/admin/page.tsx src/app/api/analyze-url/route.ts               
+      src/app/api/analyze/route.ts…)                                            
+  ⎿  (No content)                                                               
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      commit -m "Add Usage tab to admin dashboard and implement prompt caching…)
+  ⎿ [main 64a60ad] Add Usage tab to admin dashboard and implement prompt ca     
+    ching                                                                       
+     9 files changed, 930 insertions(+), 99 deletions(-)                        
+     create mode 100644 app/src/app/api/usage/route.ts                          
+                                                                                
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      push)                                                                     
+  ⎿  To https://github.com/coleschaffer/AngleFinder.git                         
+        4969e69..64a60ad  main -> main                                          
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      status)                                                                   
+  ⎿  On branch main                                                             
+     Your branch is up to date with 'origin/main'.                              
+                                                                                
+     nothing to commit, working tree clean                                      
+                                                                                
+⏺ Done. Committed and pushed to main (64a60ad). The Usage tab and prompt caching
+   implementation is now live.                                                  
+                                                                                
+✻ Cogitated for 36s                                                             
+                                                                                
+❯ Awesome, thanks! Now talk to me about Source Caching and pros/cons, how       
+  that would work, etc. Note that we currently have a DB hooked up to our       
+  Railway instance so maybe we could use that? I think its Postgres. Talk       
+  to me about this but don't make any changes.                                  
+                                                                                
+⏺ Great question! Let me break down Source Caching for your use case.           
+                                                                                
+  What Source Caching Means Here                                                
+                                                                                
+  There are actually two levels of caching to consider:                         
+                                                                                
+  1. Content Caching (Raw Source Data)                                          
+                                                                                
+  Cache the fetched content before it goes to Claude:                           
+  - YouTube transcripts                                                         
+  - Reddit post text + comments                                                 
+  - Research paper abstracts                                                    
+  - Article text from URLs                                                      
+                                                                                
+  2. Analysis Caching (Claude's Output)                                         
+                                                                                
+  Cache the analysis results (claims, hooks) after Claude processes them.       
+                                                                                
+  ---                                                                           
+  How It Would Work with Postgres                                               
+                                                                                
+  You'd add tables like:                                                        
+                                                                                
+  source_content_cache                                                          
+  - id                                                                          
+  - source_url (unique index)                                                   
+  - source_type (youtube, reddit, research, etc.)                               
+  - content_text (the transcript/article/etc.)                                  
+  - fetched_at                                                                  
+  - expires_at (optional TTL)                                                   
+                                                                                
+  source_analysis_cache                                                         
+  - id                                                                          
+  - source_url                                                                  
+  - niche                                                                       
+  - product                                                                     
+  - strategy                                                                    
+  - claims (JSONB)                                                              
+  - analyzed_at                                                                 
+  - expires_at                                                                  
+                                                                                
+  The flow becomes:                                                             
+  1. User selects a source → Check source_content_cache by URL                  
+  2. Cache hit? Use cached content. Miss? Fetch and store.                      
+  3. Before calling Claude → Check source_analysis_cache by URL + niche +       
+  product + strategy                                                            
+  4. Cache hit? Return cached claims. Miss? Analyze and store.                  
+                                                                                
+  ---                                                                           
+  Pros                                                                          
+  Benefit: API cost savings                                                     
+  Impact: Huge - analyzing the same YouTube video twice costs 2x tokens. With   
+    caching, the second user pays nothing.                                      
+  ────────────────────────────────────────                                      
+  Benefit: Faster responses                                                     
+  Impact: Cache hits return in milliseconds vs 10-30 seconds for Claude analysis
+  ────────────────────────────────────────                                      
+  Benefit: Rate limit relief                                                    
+  Impact: Fewer API calls = more headroom for concurrent users                  
+  ────────────────────────────────────────                                      
+  Benefit: Popular source handling                                              
+  Impact: If 10 users analyze the same trending podcast, you only pay once      
+  ────────────────────────────────────────                                      
+  Benefit: Transcript fetch savings                                             
+  Impact: YouTube transcripts via yt-dlp are slow (~5-10s). Caching eliminates  
+    repeat fetches.                                                             
+  ---                                                                           
+  Cons & Complications                                                          
+                                                                                
+  1. Context-Dependent Analysis                                                 
+                                                                                
+  This is the big one. Your analysis prompt includes:                           
+  - Niche (e.g., "weight loss supplements")                                     
+  - Product (e.g., "keto pills")                                                
+  - Strategy (translocate vs direct)                                            
+                                                                                
+  The same source analyzed for "weight loss supplements" vs "skincare" should   
+  produce different claims/hooks.                                               
+                                                                                
+  So you can't just cache by URL - you'd need to cache by URL + niche + product 
+  + strategy, which reduces cache hit rates significantly.                      
+                                                                                
+  Mitigation: Cache content separately from analysis. Content caching           
+  (transcripts) is context-independent and gives you most of the benefit.       
+                                                                                
+  2. Cache Invalidation                                                         
+                                                                                
+  - YouTube videos can be updated/deleted                                       
+  - Reddit posts get new comments                                               
+  - Research gets retracted                                                     
+  - How long is "fresh enough"?                                                 
+                                                                                
+  Mitigation: Set reasonable TTLs (e.g., 7-30 days for transcripts, shorter for 
+  Reddit).                                                                      
+                                                                                
+  3. Storage Growth                                                             
+                                                                                
+  Transcripts can be large (10-50KB each). If you cache 10,000 sources, that's  
+  100-500MB just in text.                                                       
+                                                                                
+  Mitigation: Railway Postgres can handle this easily. You could also compress  
+  content or set max retention limits.                                          
+                                                                                
+  4. Privacy Considerations                                                     
+                                                                                
+  - Are you storing what sources users analyzed?                                
+  - Could be sensitive depending on niche                                       
+                                                                                
+  Mitigation: Cache content only, not who requested it. Or add user consent for 
+  caching.                                                                      
+                                                                                
+  5. Stale Results                                                              
+                                                                                
+  If you improve your prompts, cached analyses become outdated.                 
+                                                                                
+  Mitigation: Version your cache. When prompts change, invalidate or ignore old 
+  analyses.                                                                     
+                                                                                
+  ---                                                                           
+  My Recommendation                                                             
+                                                                                
+  Start with Content Caching only (Level 1):                                    
+                                                                                
+  1. Cache fetched transcripts/articles by URL                                  
+  2. Don't cache Claude's analysis (too context-dependent)                      
+  3. This gives you ~60-70% of the benefit with minimal complexity              
+                                                                                
+  The expensive parts are:                                                      
+  - Fetching YouTube transcripts (slow, can fail)                               
+  - Sending large transcripts to Claude (high input tokens)                     
+                                                                                
+  Content caching solves both. Users still get personalized analysis for their  
+  niche/product, but you don't re-fetch the same 45-minute podcast transcript   
+  every time.                                                                   
+                                                                                
+  ---                                                                           
+  Quick Estimate of Savings                                                     
+                                                                                
+  If 30% of sources are analyzed by multiple users (or re-analyzed):            
+  - Without caching: 100 analyses = 100 transcript fetches + 100 Claude calls   
+  - With content caching: 100 analyses = 70 fetches + 100 Claude calls (30%     
+  fetch savings)                                                                
+  - With full caching (same context): 100 analyses = 70 fetches + 70 Claude     
+  calls (30% savings on both)                                                   
+                                                                                
+  The content caching alone could save you ~30% on fetch time and reduce input  
+  tokens if you're sending the same content repeatedly.                         
+                                                                                
+  ---                                                                           
+  Want me to dive deeper into any aspect? Or should we discuss the              
+  implementation approach when you're ready?                                    
+                                                                                
+✻ Baked for 38s                                                                 
+                                                                                
+❯ Please create a plan for implementing Content Caching. Full Caching           
+  doesnt really make sense since we want Claude's analysis to be unique         
+  based on the user's inputs - but caching just the content is good since       
+  for popular source materials, will speed up analysis since we won't have      
+  to fetch again and again.                                                     
+                                                                                
+  Please create ToDos and then implement Content Caching.                       
+                                                                                
+⏺ I'll create a plan for Content Caching and implement it.                      
+                                                                                
+⏺ Read(src/app/api/analyze/route.ts)                                            
+  ⎿  Read 686 lines                                                             
+                                                                                
+⏺ Now I understand the content fetching flow. Let me implement the caching      
+  system. First, I'll add the cache table and functions to db.ts.               
+                                                                                
+⏺ Read(src/lib/db.ts)                                                           
+  ⎿  Read 652 lines                                                             
+                                                                                
+⏺ Now I'll add the content caching functions to db.ts.                          
+                                                                                
+⏺ Update(src/lib/db.ts)                                                         
+  ⎿  Added 260 lines                                                            
+      649  export async function clearAllUsage(): Promise<void> {               
+      650    await pool.query('DELETE FROM api_usage');                         
+      651  }                                                                    
+      652 +                                                                     
+      653 +// ============================================                      
+      654 +// Source Content Caching Functions                                  
+      655 +// ============================================                      
+      656 +                                                                     
+      657 +export interface CachedContent {                                     
+      658 +  id: string;                                                        
+      659 +  sourceUrl: string;                                                 
+      660 +  sourceType: SourceType;                                            
+      661 +  contentHash: string;                                               
+      662 +  content: string;                                                   
+      663 +  contentLength: number;                                             
+      664 +  fetchDurationMs: number;                                           
+      665 +  createdAt: string;                                                 
+      666 +  expiresAt: string;                                                 
+      667 +  hitCount: number;                                                  
+      668 +  lastAccessedAt: string;                                            
+      669 +}                                                                    
+      670 +                                                                     
+      671 +export async function initContentCacheTable() {                      
+      672 +  const client = await pool.connect();                               
+      673 +  try {                                                              
+      674 +    await client.query(`                                             
+      675 +      CREATE TABLE IF NOT EXISTS source_content_cache (              
+      676 +        id UUID PRIMARY KEY,                                         
+      677 +        source_url TEXT NOT NULL UNIQUE,                             
+      678 +        source_type VARCHAR(50) NOT NULL,                            
+      679 +        content_hash VARCHAR(64) NOT NULL,                           
+      680 +        content TEXT NOT NULL,                                       
+      681 +        content_length INTEGER NOT NULL DEFAULT 0,                   
+      682 +        fetch_duration_ms INTEGER NOT NULL DEFAULT 0,                
+      683 +        created_at TIMESTAMP WITH TIME ZONE NOT NULL,                
+      684 +        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,                
+      685 +        hit_count INTEGER NOT NULL DEFAULT 0,                        
+      686 +        last_accessed_at TIMESTAMP WITH TIME ZONE NOT NULL           
+      687 +      )                                                              
+      688 +    `);                                                              
+      689 +                                                                     
+      690 +    await client.query(`                                             
+      691 +      CREATE INDEX IF NOT EXISTS idx_content_cache_url ON sour       
+          +ce_content_cache (source_url);                                       
+      692 +    `);                                                              
+      693 +    await client.query(`                                             
+      694 +      CREATE INDEX IF NOT EXISTS idx_content_cache_expires ON        
+          +source_content_cache (expires_at);                                   
+      695 +    `);                                                              
+      696 +    await client.query(`                                             
+      697 +      CREATE INDEX IF NOT EXISTS idx_content_cache_type ON sou       
+          +rce_content_cache (source_type);                                     
+      698 +    `);                                                              
+      699 +  } finally {                                                        
+      700 +    client.release();                                                
+      701 +  }                                                                  
+      702 +}                                                                    
+      703 +                                                                     
+      704 +// Default TTL by source type (in days)                              
+      705 +const CACHE_TTL_DAYS: Record<string, number> = {                     
+      706 +  youtube: 30,    // YouTube transcripts rarely change               
+      707 +  podcast: 30,    // Podcast transcripts rarely change               
+      708 +  reddit: 7,      // Reddit posts can get new comments               
+      709 +  research: 90,   // Research abstracts are stable                   
+      710 +  scholar: 90,    // Academic content is stable                      
+      711 +  arxiv: 90,      // Preprints are stable once posted                
+      712 +  preprint: 90,   // Preprints are stable                            
+      713 +  sciencedaily: 14, // News articles are fairly stable               
+      714 +};                                                                   
+      715 +                                                                     
+      716 +export interface GetCachedContentResult {                            
+      717 +  content: string;                                                   
+      718 +  cacheHit: boolean;                                                 
+      719 +  cachedAt?: string;                                                 
+      720 +  hitCount?: number;                                                 
+      721 +}                                                                    
+      722 +                                                                     
+      723 +/**                                                                  
+      724 + * Get cached content for a source URL                               
+      725 + * Returns null if not cached or expired                             
+      726 + */                                                                  
+      727 +export async function getCachedContent(sourceUrl: string): Pro       
+          +mise<GetCachedContentResult | null> {                                
+      728 +  try {                                                              
+      729 +    await initContentCacheTable();                                   
+      730 +                                                                     
+      731 +    const result = await pool.query(                                 
+      732 +      `SELECT content, created_at, hit_count                         
+      733 +       FROM source_content_cache                                     
+      734 +       WHERE source_url = $1 AND expires_at > NOW()`,                
+      735 +      [sourceUrl]                                                    
+      736 +    );                                                               
+      737 +                                                                     
+      738 +    if (result.rows.length === 0) {                                  
+      739 +      return null;                                                   
+      740 +    }                                                                
+      741 +                                                                     
+      742 +    // Update hit count and last accessed time                       
+      743 +    await pool.query(                                                
+      744 +      `UPDATE source_content_cache                                   
+      745 +       SET hit_count = hit_count + 1, last_accessed_at = NOW()       
+      746 +       WHERE source_url = $1`,                                       
+      747 +      [sourceUrl]                                                    
+      748 +    );                                                               
+      749 +                                                                     
+      750 +    const row = result.rows[0];                                      
+      751 +    return {                                                         
+      752 +      content: row.content,                                          
+      753 +      cacheHit: true,                                                
+      754 +      cachedAt: row.created_at.toISOString(),                        
+      755 +      hitCount: row.hit_count + 1,                                   
+      756 +    };                                                               
+      757 +  } catch (err) {                                                    
+      758 +    console.error('Failed to get cached content:', err);             
+      759 +    return null;                                                     
+      760 +  }                                                                  
+      761 +}                                                                    
+      762 +                                                                     
+      763 +/**                                                                  
+      764 + * Store content in cache                                            
+      765 + */                                                                  
+      766 +export async function setCachedContent(                              
+      767 +  sourceUrl: string,                                                 
+      768 +  sourceType: SourceType,                                            
+      769 +  content: string,                                                   
+      770 +  fetchDurationMs: number                                            
+      771 +): Promise<void> {                                                   
+      772 +  try {                                                              
+      773 +    await initContentCacheTable();                                   
+      774 +                                                                     
+      775 +    const id = crypto.randomUUID();                                  
+      776 +    const contentHash = await hashContent(content);                  
+      777 +    const ttlDays = CACHE_TTL_DAYS[sourceType] || 14;                
+      778 +    const now = new Date();                                          
+      779 +    const expiresAt = new Date(now.getTime() + ttlDays * 24 *        
+          +60 * 60 * 1000);                                                     
+      780 +                                                                     
+      781 +    // Upsert - update if exists, insert if not                      
+      782 +    await pool.query(                                                
+      783 +      `INSERT INTO source_content_cache                              
+      784 +       (id, source_url, source_type, content_hash, content, co       
+          +ntent_length, fetch_duration_ms,                                     
+      785 +        created_at, expires_at, hit_count, last_accessed_at)         
+      786 +       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $8)            
+      787 +       ON CONFLICT (source_url) DO UPDATE SET                        
+      788 +         content = EXCLUDED.content,                                 
+      789 +         content_hash = EXCLUDED.content_hash,                       
+      790 +         content_length = EXCLUDED.content_length,                   
+      791 +         fetch_duration_ms = EXCLUDED.fetch_duration_ms,             
+      792 +         created_at = EXCLUDED.created_at,                           
+      793 +         expires_at = EXCLUDED.expires_at,                           
+      794 +         last_accessed_at = EXCLUDED.last_accessed_at`,              
+      795 +      [                                                              
+      796 +        id,                                                          
+      797 +        sourceUrl,                                                   
+      798 +        sourceType,                                                  
+      799 +        contentHash,                                                 
+      800 +        content,                                                     
+      801 +        content.length,                                              
+      802 +        fetchDurationMs,                                             
+      803 +        now.toISOString(),                                           
+      804 +        expiresAt.toISOString(),                                     
+      805 +      ]                                                              
+      806 +    );                                                               
+      807 +  } catch (err) {                                                    
+      808 +    console.error('Failed to cache content:', err);                  
+      809 +    // Silent fail - don't let caching break the app                 
+      810 +  }                                                                  
+      811 +}                                                                    
+      812 +                                                                     
+      813 +/**                                                                  
+      814 + * Simple hash function for content (for change detection)           
+      815 + */                                                                  
+      816 +async function hashContent(content: string): Promise<string> {       
+      817 +  const encoder = new TextEncoder();                                 
+      818 +  const data = encoder.encode(content);                              
+      819 +  const hashBuffer = await crypto.subtle.digest('SHA-256', dat       
+          +a);                                                                  
+      820 +  const hashArray = Array.from(new Uint8Array(hashBuffer));          
+      821 +  return hashArray.map(b => b.toString(16).padStart(2, '0')).j       
+          +oin('');                                                             
+      822 +}                                                                    
+      823 +                                                                     
+      824 +/**                                                                  
+      825 + * Get cache statistics for admin dashboard                          
+      826 + */                                                                  
+      827 +export interface ContentCacheStats {                                 
+      828 +  totalEntries: number;                                              
+      829 +  totalSizeBytes: number;                                            
+      830 +  totalHits: number;                                                 
+      831 +  bySourceType: Record<string, { count: number; sizeBytes: num       
+          +ber; hits: number }>;                                                
+      832 +  avgFetchDurationMs: number;                                        
+      833 +  oldestEntry: string | null;                                        
+      834 +  newestEntry: string | null;                                        
+      835 +  expiredCount: number;                                              
+      836 +}                                                                    
+      837 +                                                                     
+      838 +export async function getContentCacheStats(): Promise<ContentC       
+          +acheStats> {                                                         
+      839 +  await initContentCacheTable();                                     
+      840 +                                                                     
+      841 +  // Overall stats                                                   
+      842 +  const overallResult = await pool.query(`                           
+      843 +    SELECT                                                           
+      844 +      COUNT(*) as total_entries,                                     
+      845 +      COALESCE(SUM(content_length), 0) as total_size,                
+      846 +      COALESCE(SUM(hit_count), 0) as total_hits,                     
+      847 +      COALESCE(AVG(fetch_duration_ms), 0) as avg_fetch_duratio       
+          +n,                                                                   
+      848 +      MIN(created_at) as oldest_entry,                               
+      849 +      MAX(created_at) as newest_entry                                
+      850 +    FROM source_content_cache                                        
+      851 +    WHERE expires_at > NOW()                                         
+      852 +  `);                                                                
+      853 +  const overall = overallResult.rows[0];                             
+      854 +                                                                     
+      855 +  // By source type                                                  
+      856 +  const byTypeResult = await pool.query(`                            
+      857 +    SELECT                                                           
+      858 +      source_type,                                                   
+      859 +      COUNT(*) as count,                                             
+      860 +      COALESCE(SUM(content_length), 0) as size_bytes,                
+      861 +      COALESCE(SUM(hit_count), 0) as hits                            
+      862 +    FROM source_content_cache                                        
+      863 +    WHERE expires_at > NOW()                                         
+      864 +    GROUP BY source_type                                             
+      865 +  `);                                                                
+      866 +  const bySourceType: Record<string, { count: number; sizeByte       
+          +s: number; hits: number }> = {};                                     
+      867 +  byTypeResult.rows.forEach((row: any) => {                          
+      868 +    bySourceType[row.source_type] = {                                
+      869 +      count: parseInt(row.count, 10),                                
+      870 +      sizeBytes: parseInt(row.size_bytes, 10),                       
+      871 +      hits: parseInt(row.hits, 10),                                  
+      872 +    };                                                               
+      873 +  });                                                                
+      874 +                                                                     
+      875 +  // Expired count                                                   
+      876 +  const expiredResult = await pool.query(`                           
+      877 +    SELECT COUNT(*) as count                                         
+      878 +    FROM source_content_cache                                        
+      879 +    WHERE expires_at <= NOW()                                        
+      880 +  `);                                                                
+      881 +  const expiredCount = parseInt(expiredResult.rows[0].count, 1       
+          +0);                                                                  
+      882 +                                                                     
+      883 +  return {                                                           
+      884 +    totalEntries: parseInt(overall.total_entries, 10),               
+      885 +    totalSizeBytes: parseInt(overall.total_size, 10),                
+      886 +    totalHits: parseInt(overall.total_hits, 10),                     
+      887 +    bySourceType,                                                    
+      888 +    avgFetchDurationMs: Math.round(parseFloat(overall.avg_fetc       
+          +h_duration)),                                                        
+      889 +    oldestEntry: overall.oldest_entry ? overall.oldest_entry.t       
+          +oISOString() : null,                                                 
+      890 +    newestEntry: overall.newest_entry ? overall.newest_entry.t       
+          +oISOString() : null,                                                 
+      891 +    expiredCount,                                                    
+      892 +  };                                                                 
+      893 +}                                                                    
+      894 +                                                                     
+      895 +/**                                                                  
+      896 + * Clear expired cache entries                                       
+      897 + */                                                                  
+      898 +export async function clearExpiredCache(): Promise<number> {         
+      899 +  await initContentCacheTable();                                     
+      900 +  const result = await pool.query(                                   
+      901 +    `DELETE FROM source_content_cache WHERE expires_at <= NOW(       
+          +) RETURNING id`                                                      
+      902 +  );                                                                 
+      903 +  return result.rowCount || 0;                                       
+      904 +}                                                                    
+      905 +                                                                     
+      906 +/**                                                                  
+      907 + * Clear all cache entries                                           
+      908 + */                                                                  
+      909 +export async function clearAllCache(): Promise<void> {               
+      910 +  await pool.query('DELETE FROM source_content_cache');              
+      911 +}                                                                    
+                                                                                
+⏺ Now I'll update the analyze route to use the content cache.                   
+                                                                                
+⏺ Update(src/app/api/analyze/route.ts)                                          
+  ⎿  Added 2 lines, removed 2 lines                                             
+      1  import { NextRequest, NextResponse } from 'next/server';               
+      2  import { Supadata } from '@supadata/js';                               
+      3 -import { Source, AnalysisResult, Claim, Hook, ViralityScore, Bri       
+        -dgeDistance, AngleType, AwarenessLevel } from '@/types';               
+      4 -import { logError } from '@/lib/db';                                   
+      3 +import { Source, AnalysisResult, Claim, Hook, ViralityScore, Bri       
+        +dgeDistance, AngleType, AwarenessLevel, SourceType } from '@/typ       
+        +es';                                                                   
+      4 +import { logError, getCachedContent, setCachedContent } from '@/       
+        +lib/db';                                                               
+      5  import { withRetry, ANALYSIS_SYSTEM_PROMPT } from '@/lib/anthrop       
+         ic';                                                                   
+      6                                                                         
+      7  // Initialize Supadata client for YouTube transcripts                  
+                                                                                
+⏺ Now I'll update the POST handler to use the cache.                            
+                                                                                
+⏺ Update(src/app/api/analyze/route.ts)                                          
+  ⎿  Added 43 lines, removed 20 lines                                           
+      606                                                                       
+      607      console.log(`Analyzing source: ${source.id} (${source.type       
+           })`);                                                                
+      608                                                                       
+      609 -    // Get content based on source type                              
+      609 +    // Check cache first                                             
+      610      let content: string | null = null;                               
+      611 +    let cacheHit = false;                                            
+      612 +    const cachedResult = await getCachedContent(source.url);         
+      613                                                                       
+      612 -    if (source.type === 'youtube' || source.type === 'podcast'       
+          -) {                                                                  
+      613 -      const videoId = source.url.match(/(?:v=|\/)([\w-]{11})/)       
+          -?.[1];                                                               
+      614 -      if (videoId) {                                                 
+      615 -        content = await getYouTubeContent(videoId);                  
+      616 -      }                                                              
+      617 -    } else if (source.type === 'reddit') {                           
+      618 -      content = await getRedditContent(source.url);                  
+      619 -    } else if (source.type === 'research' || source.type === '       
+          -scholar' || source.type === 'arxiv' || source.type === 'prepri       
+          -nt') {                                                               
+      620 -      // Academic sources - use stored abstract/snippet first        
+      621 -      content = getAcademicContent(source);                          
+      614 +    if (cachedResult) {                                              
+      615 +      content = cachedResult.content;                                
+      616 +      cacheHit = true;                                               
+      617 +      console.log(`[CACHE HIT] ${source.id}: Using cached cont       
+          +ent (${content.length} chars, hit #${cachedResult.hitCount})`)       
+          +;                                                                    
+      618 +    } else {                                                         
+      619 +      console.log(`[CACHE MISS] ${source.id}: Fetching fresh c       
+          +ontent`);                                                            
+      620                                                                       
+      623 -      // Fallback: fetch PubMed abstract if not stored               
+      624 -      if ((!content || content.length < 100) && source.type ==       
+          -= 'research') {                                                      
+      625 -        const pmid = source.url.match(/pubmed\.ncbi\.nlm\.nih\       
+          -.gov\/(\d+)/)?.[1] ||                                                
+      626 -                     source.url.match(/\/(\d+)\/?$/)?.[1];           
+      627 -        if (pmid) {                                                  
+      628 -          content = await getPubMedAbstract(pmid);                   
+      621 +      // Track fetch start time for cache stats                      
+      622 +      const fetchStartTime = Date.now();                             
+      623 +                                                                     
+      624 +      // Get content based on source type                            
+      625 +      if (source.type === 'youtube' || source.type === 'podcas       
+          +t') {                                                                
+      626 +        const videoId = source.url.match(/(?:v=|\/)([\w-]{11})       
+          +/)?.[1];                                                             
+      627 +        if (videoId) {                                               
+      628 +          content = await getYouTubeContent(videoId);                
+      629          }                                                            
+      630 +      } else if (source.type === 'reddit') {                         
+      631 +        content = await getRedditContent(source.url);                
+      632 +      } else if (source.type === 'research' || source.type ===       
+          + 'scholar' || source.type === 'arxiv' || source.type === 'prep       
+          +rint') {                                                             
+      633 +        // Academic sources - use stored abstract/snippet firs       
+          +t                                                                    
+      634 +        content = getAcademicContent(source);                        
+      635 +                                                                     
+      636 +        // Fallback: fetch PubMed abstract if not stored             
+      637 +        if ((!content || content.length < 100) && source.type        
+          +=== 'research') {                                                    
+      638 +          const pmid = source.url.match(/pubmed\.ncbi\.nlm\.ni       
+          +h\.gov\/(\d+)/)?.[1] ||                                              
+      639 +                       source.url.match(/\/(\d+)\/?$/)?.[1];         
+      640 +          if (pmid) {                                                
+      641 +            content = await getPubMedAbstract(pmid);                 
+      642 +          }                                                          
+      643 +        }                                                            
+      644 +      } else if (source.type === 'sciencedaily') {                   
+      645 +        content = await getScienceDailyContent(source.url);          
+      646        }                                                              
+      631 -    } else if (source.type === 'sciencedaily') {                     
+      632 -      content = await getScienceDailyContent(source.url);            
+      647 +                                                                     
+      648 +      const fetchDurationMs = Date.now() - fetchStartTime;           
+      649 +                                                                     
+      650 +      // Cache the content if we got valid content                   
+      651 +      if (content && content.length >= 100) {                        
+      652 +        console.log(`[CACHE STORE] ${source.id}: Caching conte       
+          +nt (${content.length} chars, fetched in ${fetchDurationMs}ms)`       
+          +);                                                                   
+      653 +        await setCachedContent(source.url, source.type as Sour       
+          +ceType, content, fetchDurationMs);                                   
+      654 +      }                                                              
+      655      }                                                                
+      656                                                                       
+      657      // If we couldn't get content, use Claude to analyze based       
+            on title/metadata                                                   
+      658 +    // (Don't cache metadata fallbacks as they're not real con       
+          +tent)                                                                
+      659      if (!content || content.length < 100) {                          
+      660        console.log(`No content found for ${source.id}, using ti       
+           tle/metadata fallback`);                                             
+      661        content = `Title: ${source.title}\nSource: ${source.url}       
+           \nType: ${source.type}`;                                             
+     ...                                                                        
+      669  Based on this title and your knowledge of this topic, provide        
+           an analysis as if you had access to the full content.`;              
+      670                                                                       
+      671        content = metaPrompt;                                          
+      649 -    } else {                                                         
+      672 +    } else if (!cacheHit) {                                          
+      673        console.log(`Content found for ${source.id}: ${content.l       
+           ength} chars`);                                                      
+      674      }                                                                
+      675                                                                       
+                                                                                
+⏺ Let me create a cache stats API endpoint.                                     
+                                                                                
+⏺ Write(src/app/api/cache/route.ts)                                             
+  ⎿  Wrote 45 lines to src/app/api/cache/route.ts                               
+      1 import { NextResponse } from 'next/server';                             
+      2 import { getContentCacheStats, clearExpiredCache, clearAllCache }       
+         from '@/lib/db';                                                       
+      3 // GET /api/cache - Get cache statistics                                
+      4 export async function GET() {                                           
+      5   try {                                                                 
+      6     const stats = await getContentCacheStats();                         
+      7     return NextResponse.json(stats);                                    
+      8   } catch (error) {                                                     
+      9     console.error('Cache stats fetch error:', error);                   
+     … +35 lines (ctrl+o to expand)                                             
+                                                                                
+⏺ Now let me add cache stats to the admin dashboard. Let me read the current    
+  admin page.                                                                   
+                                                                                
+⏺ Read(src/app/admin/page.tsx)                                                  
+  ⎿  Read 1026 lines                                                            
+                                                                                
+⏺ Let me add the Cache tab to the admin dashboard. I'll make several edits to   
+  add the new tab.                                                              
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 2 lines                                                              
+      25    Cpu,                                                                
+      26    ArrowUpRight,                                                       
+      27    ArrowDownRight,                                                     
+      28 +  HardDrive,                                                          
+      29 +  CheckCircle,                                                        
+      30  } from 'lucide-react';                                                
+      31  import Link from 'next/link';                                         
+      32                                                                        
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 12 lines, removed 1 line                                             
+      136    recentRequests: UsageEntry[];                                      
+      137  }                                                                    
+      138                                                                       
+      139 -type Tab = 'feedback' | 'analytics' | 'errors' | 'usage';            
+      139 +interface ContentCacheStats {                                        
+      140 +  totalEntries: number;                                              
+      141 +  totalSizeBytes: number;                                            
+      142 +  totalHits: number;                                                 
+      143 +  bySourceType: Record<string, { count: number; sizeBytes: num       
+          +ber; hits: number }>;                                                
+      144 +  avgFetchDurationMs: number;                                        
+      145 +  oldestEntry: string | null;                                        
+      146 +  newestEntry: string | null;                                        
+      147 +  expiredCount: number;                                              
+      148 +}                                                                    
+      149                                                                       
+      150 +type Tab = 'feedback' | 'analytics' | 'errors' | 'usage' | 'ca       
+          +che';                                                                
+      151 +                                                                     
+      152  const awarenessConfig = {                                            
+      153    hidden: { label: 'Hidden', color: '#22C55E', Icon: EyeOff },       
+      154    emerging: { label: 'Emerging', color: '#EAB308', Icon: Trend       
+           ingUp },                                                             
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 1 line                                                               
+      172    const [analytics, setAnalytics] = useState<AnalyticsSummary        
+           | null>(null);                                                       
+      173    const [errorsData, setErrorsData] = useState<ErrorsData | nu       
+           ll>(null);                                                           
+      174    const [usageData, setUsageData] = useState<UsageSummary | nu       
+           ll>(null);                                                           
+      175 +  const [cacheData, setCacheData] = useState<ContentCacheStats       
+          + | null>(null);                                                      
+      176    const [isLoading, setIsLoading] = useState(true);                  
+      177                                                                       
+      178    const loadFeedback = async () => {                                 
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 13 lines, removed 1 line                                             
+      223      }                                                                
+      224    };                                                                 
+      225                                                                       
+      226 +  const loadCache = async () => {                                    
+      227 +    try {                                                            
+      228 +      const response = await fetch('/api/cache');                    
+      229 +      if (response.ok) {                                             
+      230 +        const data = await response.json();                          
+      231 +        setCacheData(data);                                          
+      232 +      }                                                              
+      233 +    } catch (error) {                                                
+      234 +      console.error('Error loading cache stats:', error);            
+      235 +    }                                                                
+      236 +  };                                                                 
+      237 +                                                                     
+      238    const loadData = async () => {                                     
+      239      setIsLoading(true);                                              
+      228 -    await Promise.all([loadFeedback(), loadAnalytics(), loadEr       
+          -rors(), loadUsage()]);                                               
+      240 +    await Promise.all([loadFeedback(), loadAnalytics(), loadEr       
+          +rors(), loadUsage(), loadCache()]);                                  
+      241      setIsLoading(false);                                             
+      242    };                                                                 
+      243                                                                       
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 27 lines                                                             
+      317      }                                                                
+      318    };                                                                 
+      319                                                                       
+      320 +  const cleanupExpiredCache = async () => {                          
+      321 +    try {                                                            
+      322 +      const response = await fetch('/api/cache', { method: 'PO       
+          +ST' });                                                              
+      323 +      if (response.ok) {                                             
+      324 +        const data = await response.json();                          
+      325 +        alert(`Cleaned up ${data.cleared} expired cache entrie       
+          +s`);                                                                 
+      326 +        loadCache();                                                 
+      327 +      }                                                              
+      328 +    } catch (error) {                                                
+      329 +      console.error('Error cleaning up cache:', error);              
+      330 +    }                                                                
+      331 +  };                                                                 
+      332 +                                                                     
+      333 +  const clearAllCache = async () => {                                
+      334 +    if (confirm('Are you sure you want to clear ALL cached con       
+          +tent? This will cause all sources to be re-fetched on next ana       
+          +lysis.')) {                                                          
+      335 +      try {                                                          
+      336 +        const response = await fetch('/api/cache', { method: '       
+          +DELETE' });                                                          
+      337 +        if (response.ok) {                                           
+      338 +          setCacheData(null);                                        
+      339 +          loadCache();                                               
+      340 +        }                                                            
+      341 +      } catch (error) {                                              
+      342 +        console.error('Error clearing cache:', error);               
+      343 +      }                                                              
+      344 +    }                                                                
+      345 +  };                                                                 
+      346 +                                                                     
+      347    // Format token counts for display                                 
+      348    const formatTokens = (tokens: number): string => {                 
+      349      if (tokens >= 1000000) return `${(tokens / 1000000).toFixe       
+           d(1)}M`;                                                             
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 7 lines                                                              
+      357      return `${ms}ms`;                                                
+      358    };                                                                 
+      359                                                                       
+      360 +  // Format bytes for display                                        
+      361 +  const formatBytes = (bytes: number): string => {                   
+      362 +    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)       
+          +).toFixed(1)} MB`;                                                   
+      363 +    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB       
+          +`;                                                                   
+      364 +    return `${bytes} B`;                                             
+      365 +  };                                                                 
+      366 +                                                                     
+      367    return (                                                           
+      368      <div className="min-h-dvh bg-[var(--ca-black)] text-white        
+           p-4 sm:p-6 md:p-8">                                                  
+      369        <div className="max-w-5xl mx-auto">                            
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 16 lines                                                             
+      453                </span>                                                
+      454              )}                                                       
+      455            </button>                                                  
+      456 +          <button                                                    
+      457 +            onClick={() => setActiveTab('cache')}                    
+      458 +            className={`flex items-center gap-2 px-4 py-3 text       
+          +-sm font-medium border-b-2 transition-colors ${                      
+      459 +              activeTab === 'cache'                                  
+      460 +                ? 'border-[var(--ca-gold)] text-[var(--ca-gold       
+          +)]'                                                                  
+      461 +                : 'border-transparent text-[var(--ca-gray-ligh       
+          +t)] hover:text-white'                                                
+      462 +            }`}                                                      
+      463 +          >                                                          
+      464 +            <HardDrive className="w-4 h-4" />                        
+      465 +            Cache                                                    
+      466 +            {cacheData && cacheData.totalEntries > 0 && (            
+      467 +              <span className="px-1.5 py-0.5 text-xs bg-purple       
+          +-500/20 text-purple-400 rounded-full">                               
+      468 +                {cacheData.totalEntries}                             
+      469 +              </span>                                                
+      470 +            )}                                                       
+      471 +          </button>                                                  
+      472          </div>                                                       
+      473                                                                       
+      474          {isLoading ? (                                               
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 138 lines                                                            
+      475            <div className="text-center py-20">                        
+      476              <p className="text-[var(--ca-gray-light)]">Loading       
+           ...</p>                                                              
+      477            </div>                                                     
+      478 +        ) : activeTab === 'cache' ? (                                
+      479 +          /* Cache Tab */                                            
+      480 +          <div>                                                      
+      481 +            {!cacheData || cacheData.totalEntries === 0 ? (          
+      482 +              <div className="text-center py-20">                    
+      483 +                <HardDrive className="w-12 h-12 text-[var(--ca       
+          +-gray)] mx-auto mb-4" />                                             
+      484 +                <p className="text-[var(--ca-gray-light)]">No        
+          +cached content yet</p>                                               
+      485 +                <p className="text-sm text-[var(--ca-gray)] mt       
+          +-1">                                                                 
+      486 +                  Source content will be cached here to speed        
+          +up repeat analyses                                                   
+      487 +                </p>                                                 
+      488 +              </div>                                                 
+      489 +            ) : (                                                    
+      490 +              <div className="space-y-6">                            
+      491 +                {/* Cache Stats Overview */}                         
+      492 +                <div className="grid grid-cols-2 md:grid-cols-       
+          +4 gap-4">                                                            
+      493 +                  <div className="card">                             
+      494 +                    <div className="flex items-center gap-2 mb       
+          +-2">                                                                 
+      495 +                      <Database className="w-4 h-4 text-purple       
+          +-400" />                                                             
+      496 +                      <span className="text-xs text-[var(--ca-       
+          +gray-light)]">Cached Sources</span>                                  
+      497 +                    </div>                                           
+      498 +                    <div className="text-2xl font-bold text-pu       
+          +rple-400">{cacheData.totalEntries}</div>                             
+      499 +                    <div className="text-xs text-[var(--ca-gra       
+          +y)] mt-1">Active entries</div>                                       
+      500 +                  </div>                                             
+      501 +                  <div className="card">                             
+      502 +                    <div className="flex items-center gap-2 mb       
+          +-2">                                                                 
+      503 +                      <HardDrive className="w-4 h-4 text-blue-       
+          +400" />                                                              
+      504 +                      <span className="text-xs text-[var(--ca-       
+          +gray-light)]">Total Size</span>                                      
+      505 +                    </div>                                           
+      506 +                    <div className="text-2xl font-bold text-bl       
+          +ue-400">{formatBytes(cacheData.totalSizeBytes)}</div>                
+      507 +                    <div className="text-xs text-[var(--ca-gra       
+          +y)] mt-1">Stored content</div>                                       
+      508 +                  </div>                                             
+      509 +                  <div className="card">                             
+      510 +                    <div className="flex items-center gap-2 mb       
+          +-2">                                                                 
+      511 +                      <CheckCircle className="w-4 h-4 text-gre       
+          +en-400" />                                                           
+      512 +                      <span className="text-xs text-[var(--ca-       
+          +gray-light)]">Cache Hits</span>                                      
+      513 +                    </div>                                           
+      514 +                    <div className="text-2xl font-bold text-gr       
+          +een-400">{cacheData.totalHits}</div>                                 
+      515 +                    <div className="text-xs text-[var(--ca-gra       
+          +y)] mt-1">Times served from cache</div>                              
+      516 +                  </div>                                             
+      517 +                  <div className="card">                             
+      518 +                    <div className="flex items-center gap-2 mb       
+          +-2">                                                                 
+      519 +                      <Clock className="w-4 h-4 text-[var(--ca       
+          +-gold)]" />                                                          
+      520 +                      <span className="text-xs text-[var(--ca-       
+          +gray-light)]">Avg Fetch Time</span>                                  
+      521 +                    </div>                                           
+      522 +                    <div className="text-2xl font-bold text-[v       
+          +ar(--ca-gold)]">{formatDuration(cacheData.avgFetchDurationMs)}       
+          +</div>                                                               
+      523 +                    <div className="text-xs text-[var(--ca-gra       
+          +y)] mt-1">Time saved per hit</div>                                   
+      524 +                  </div>                                             
+      525 +                </div>                                               
+      526 +                                                                     
+      527 +                {/* Cache by Source Type */}                         
+      528 +                {Object.keys(cacheData.bySourceType).length >        
+          +0 && (                                                               
+      529 +                  <div className="card">                             
+      530 +                    <h3 className="text-sm font-medium text-[v       
+          +ar(--ca-gray-light)] uppercase tracking-wider mb-4">                 
+      531 +                      Cache by Source Type                           
+      532 +                    </h3>                                            
+      533 +                    <div className="space-y-3">                      
+      534 +                      {Object.entries(cacheData.bySourceType)        
+      535 +                        .sort(([, a], [, b]) => b.count - a.co       
+          +unt)                                                                 
+      536 +                        .map(([sourceType, stats]) => (              
+      537 +                          <div key={sourceType} className="bg-       
+          +[var(--ca-gray-dark)] rounded-lg p-4">                               
+      538 +                            <div className="flex items-center        
+          +justify-between mb-2">                                               
+      539 +                              <span className="text-sm font-me       
+          +dium capitalize">{sourceType}</span>                                 
+      540 +                              <span className="text-purple-400       
+          + font-bold">{stats.count} sources</span>                             
+      541 +                            </div>                                   
+      542 +                            <div className="flex items-center        
+          +gap-4 text-xs text-[var(--ca-gray-light)]">                          
+      543 +                              <span>Size: {formatBytes(stats.s       
+          +izeBytes)}</span>                                                    
+      544 +                              <span>·</span>                         
+      545 +                              <span>Hits: {stats.hits}</span>        
+      546 +                              <span>·</span>                         
+      547 +                              <span>Avg: {formatBytes(stats.co       
+          +unt > 0 ? stats.sizeBytes / stats.count : 0)}/source</span>          
+      548 +                            </div>                                   
+      549 +                            <div className="h-2 bg-[var(--ca-b       
+          +lack)] rounded-full overflow-hidden mt-2">                           
+      550 +                              <div                                   
+      551 +                                className="h-full bg-purple-40       
+          +0 rounded-full"                                                      
+      552 +                                style={{                             
+      553 +                                  width: `${Math.min(100, (sta       
+          +ts.count / cacheData.totalEntries) * 100)}%`                         
+      554 +                                }}                                   
+      555 +                              />                                     
+      556 +                            </div>                                   
+      557 +                          </div>                                     
+      558 +                        ))}                                          
+      559 +                    </div>                                           
+      560 +                  </div>                                             
+      561 +                )}                                                   
+      562 +                                                                     
+      563 +                {/* Cache Timeline */}                               
+      564 +                <div className="card">                               
+      565 +                  <h3 className="text-sm font-medium text-[var       
+          +(--ca-gray-light)] uppercase tracking-wider mb-4">                   
+      566 +                    Cache Timeline                                   
+      567 +                  </h3>                                              
+      568 +                  <div className="grid grid-cols-2 gap-4">           
+      569 +                    <div className="bg-[var(--ca-gray-dark)] r       
+          +ounded-lg p-4">                                                      
+      570 +                      <div className="text-xs text-[var(--ca-g       
+          +ray-light)] mb-1">Oldest Entry</div>                                 
+      571 +                      <div className="text-sm font-medium">          
+      572 +                        {cacheData.oldestEntry                       
+      573 +                          ? format(new Date(cacheData.oldestEn       
+          +try), 'MMM d, yyyy · h:mm a')                                        
+      574 +                          : 'N/A'}                                   
+      575 +                      </div>                                         
+      576 +                    </div>                                           
+      577 +                    <div className="bg-[var(--ca-gray-dark)] r       
+          +ounded-lg p-4">                                                      
+      578 +                      <div className="text-xs text-[var(--ca-g       
+          +ray-light)] mb-1">Newest Entry</div>                                 
+      579 +                      <div className="text-sm font-medium">          
+      580 +                        {cacheData.newestEntry                       
+      581 +                          ? format(new Date(cacheData.newestEn       
+          +try), 'MMM d, yyyy · h:mm a')                                        
+      582 +                          : 'N/A'}                                   
+      583 +                      </div>                                         
+      584 +                    </div>                                           
+      585 +                  </div>                                             
+      586 +                </div>                                               
+      587 +                                                                     
+      588 +                {/* Cache Actions */}                                
+      589 +                <div className="card">                               
+      590 +                  <h3 className="text-sm font-medium text-[var       
+          +(--ca-gray-light)] uppercase tracking-wider mb-4">                   
+      591 +                    Cache Management                                 
+      592 +                  </h3>                                              
+      593 +                  <div className="flex flex-wrap gap-3">             
+      594 +                    <button                                          
+      595 +                      onClick={cleanupExpiredCache}                  
+      596 +                      className="btn btn-secondary"                  
+      597 +                    >                                                
+      598 +                      <RefreshCw className="w-4 h-4" />              
+      599 +                      Cleanup Expired ({cacheData.expiredCount       
+          +})                                                                   
+      600 +                    </button>                                        
+      601 +                    <button                                          
+      602 +                      onClick={clearAllCache}                        
+      603 +                      className="btn btn-ghost text-red-400 ho       
+          +ver:bg-red-500/10"                                                   
+      604 +                    >                                                
+      605 +                      <Trash2 className="w-4 h-4" />                 
+      606 +                      Clear All Cache                                
+      607 +                    </button>                                        
+      608 +                  </div>                                             
+      609 +                  <p className="text-xs text-[var(--ca-gray)]        
+          +mt-3">                                                               
+      610 +                    Cache TTL varies by source type: YouTube/P       
+          +odcasts (30 days), Reddit (7 days), Research (90 days), Scienc       
+          +eDaily (14 days)                                                     
+      611 +                  </p>                                               
+      612 +                </div>                                               
+      613 +              </div>                                                 
+      614 +            )}                                                       
+      615 +          </div>                                                     
+      616          ) : activeTab === 'usage' ? (                                
+      617            /* Usage Tab */                                            
+      618            <div>                                                      
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && npm  
+      run build 2>&1 | head -100)                                               
+  ⎿  > app@0.1.0 build                                                          
+     > next build                                                               
+     … +44 lines (ctrl+o to expand)                                             
+                                                                                
+⏺ Build succeeded. Let me finalize the todos.                                   
+                                                                                
+⏺ All done. Here's a summary of the Content Caching implementation:             
+                                                                                
+  Content Caching - Implementation Complete                                     
+                                                                                
+  Database Schema (/lib/db.ts)                                                  
+                                                                                
+  New source_content_cache table with:                                          
+  - source_url (unique) - the URL being cached                                  
+  - source_type - youtube, reddit, research, etc.                               
+  - content - the actual transcript/article text                                
+  - content_length - for size tracking                                          
+  - fetch_duration_ms - original fetch time (shows time saved)                  
+  - hit_count - how many times this cache entry was used                        
+  - expires_at - TTL-based expiration                                           
+                                                                                
+  Cache TTLs by Source Type                                                     
+  ┌──────────────────────────────────┬─────────┐                                
+  │           Source Type            │   TTL   │                                
+  ├──────────────────────────────────┼─────────┤                                
+  │ YouTube/Podcasts                 │ 30 days │                                
+  ├──────────────────────────────────┼─────────┤                                
+  │ Research/Scholar/arXiv/Preprints │ 90 days │                                
+  ├──────────────────────────────────┼─────────┤                                
+  │ ScienceDaily                     │ 14 days │                                
+  ├──────────────────────────────────┼─────────┤                                
+  │ Reddit                           │ 7 days  │                                
+  └──────────────────────────────────┴─────────┘                                
+  Cache Functions                                                               
+                                                                                
+  - getCachedContent(url) - Check for valid cached content                      
+  - setCachedContent(url, type, content, duration) - Store content              
+  - getContentCacheStats() - Stats for admin dashboard                          
+  - clearExpiredCache() - Cleanup old entries                                   
+  - clearAllCache() - Full reset                                                
+                                                                                
+  Analyze Route Integration                                                     
+                                                                                
+  The /api/analyze route now:                                                   
+  1. Checks cache first before fetching                                         
+  2. Returns cached content immediately on hit (logs [CACHE HIT])               
+  3. Fetches fresh content on miss (logs [CACHE MISS])                          
+  4. Stores fresh content in cache (logs [CACHE STORE])                         
+                                                                                
+  Admin Dashboard - Cache Tab                                                   
+                                                                                
+  New "Cache" tab in /admin showing:                                            
+  - Total cached sources                                                        
+  - Total size (in bytes/KB/MB)                                                 
+  - Total cache hits                                                            
+  - Average fetch duration saved                                                
+  - Breakdown by source type                                                    
+  - Cache timeline (oldest/newest entries)                                      
+  - Cleanup expired & Clear all buttons                                         
+                                                                                
+  API Endpoint (/api/cache)                                                     
+                                                                                
+  - GET - Get cache statistics                                                  
+  - POST - Cleanup expired entries                                              
+  - DELETE - Clear all cache                                                    
+                                                                                
+  Would you like me to commit and push these changes?                           
+                                                                                
+✻ Brewed for 3m 42s                                                             
+                                                                                
+❯ Please create a documentation file in markdown outlining how this Content     
+  Caching works, and then commit and push changes                               
+                                                                                
+⏺ Write(docs/content-caching.md)                                                
+  ⎿  Wrote 269 lines to docs/content-caching.md                                 
+      1 # Content Caching System                                                
+      2 This document describes the Content Caching system used in the An       
+        gle Finder application to optimize performance and reduce redunda       
+        nt content fetching.                                                    
+      3 ## Overview                                                             
+      4 Content Caching stores the raw fetched content (transcripts, arti       
+        cles, abstracts, etc.) from sources so that subsequent analyses o       
+        f the same source don't need to re-fetch the content. This is par       
+        ticularly valuable for:                                                 
+      5 - **YouTube/Podcast transcripts** - Fetching via Supadata API can       
+         take 5-30 seconds                                                      
+      6 - **Reddit posts** - API calls have rate limits                         
+     … +259 lines (ctrl+o to expand)                                            
+                                                                                
+⏺ Now let me commit and push all the changes.                                   
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      status)                                                                   
+  ⎿  On branch main                                                             
+     Your branch is up to date with 'origin/main'.                              
+     … +13 lines (ctrl+o to expand)                                             
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      diff --stat)                                                              
+  ⎿  app/src/app/admin/page.tsx       | 218 +++++++++++++++++++++++++++++++     
+    -                                                                           
+     app/src/app/api/analyze/route.ts |  69 +++++++----                         
+    … +3 lines (ctrl+o to expand)                                               
+                                                                                
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      add src/app/admin/page.tsx src/app/api/analyze/route.ts src/lib/db.ts     
+      src/app/api/cache/…)                                                      
+  ⎿  (No content)                                                               
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      commit -m "Add content caching system for source materials…)              
+  ⎿  [main 6607565] Add content caching system for source materials             
+      5 files changed, 834 insertions(+), 25 deletions(-)                       
+      create mode 100644 app/docs/content-caching.md                            
+      create mode 100644 app/src/app/api/cache/route.ts                         
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      push)                                                                     
+  ⎿  To https://github.com/coleschaffer/AngleFinder.git                         
+        64a60ad..6607565  main -> main                                          
+                                                                                
+⏺ Done! Committed and pushed to main (6607565).                                 
+                                                                                
+  Summary of changes:                                                           
+  - docs/content-caching.md - Comprehensive documentation explaining the caching
+   system                                                                       
+  - src/lib/db.ts - Cache table schema and functions                            
+  - src/app/api/analyze/route.ts - Cache integration with logging               
+  - src/app/api/cache/route.ts - New API endpoint for cache management          
+  - src/app/admin/page.tsx - New Cache tab in admin dashboard                   
+                                                                                
+  The documentation covers:                                                     
+  - Overview and architecture                                                   
+  - Cache flow diagram                                                          
+  - TTLs by source type                                                         
+  - API endpoints                                                               
+  - Admin dashboard features                                                    
+  - Performance benefits                                                        
+  - Monitoring and maintenance                                                  
+  - Future improvement ideas                                                    
+                                                                                
+✻ Crunched for 1m 13s                                                           
+                                                                                
+❯ Cool thanks. I noticed this on the Cache admin page, what does it mean?       
+  Cache TTL varies by source type: YouTube/Podcasts (30 days), Reddit (7        
+  days), Research (90 days), ScienceDaily (14 days)                             
+                                                                                
+⏺ TTL = Time To Live - it's how long cached content stays valid before it       
+  expires.                                                                      
+                                                                                
+  When we cache content from a source, we don't want to keep it forever because:
+  - YouTube videos could get updated descriptions                               
+  - Reddit posts get new comments                                               
+  - Research could be retracted/updated                                         
+  - News articles might be corrected                                            
+                                                                                
+  So each source type has a different expiration time based on how likely the   
+  content is to change:                                                         
+  Source Type: YouTube/Podcasts                                                 
+  TTL: 30 days                                                                  
+  Why: Transcripts never change after upload                                    
+  ────────────────────────────────────────                                      
+  Source Type: Research/Scholar/arXiv                                           
+  TTL: 90 days                                                                  
+  Why: Academic papers are stable once published                                
+  ────────────────────────────────────────                                      
+  Source Type: ScienceDaily                                                     
+  TTL: 14 days                                                                  
+  Why: News articles occasionally get updates                                   
+  ────────────────────────────────────────                                      
+  Source Type: Reddit                                                           
+  TTL: 7 days                                                                   
+  Why: Posts can receive new top comments                                       
+  What happens when content expires:                                            
+  1. The cached entry is ignored (treated as a cache miss)                      
+  2. Fresh content is fetched from the source                                   
+  3. New content replaces the old cache entry                                   
+                                                                                
+  The "Cleanup Expired" button in the admin dashboard removes these stale       
+  entries from the database to free up space, but even without cleanup, expired 
+  entries are simply ignored during lookups.                                    
+                                                                                
+❯ I dont like that sources expire. We should keep all until we manually         
+  clean them up.                                                                
+                                                                                
+⏺ Makes sense - you can always manually clear if needed. Let me update that.    
+                                                                                
+⏺ Update(src/lib/db.ts)                                                         
+  ⎿  Added 2 lines, removed 11 lines                                            
+      701    }                                                                  
+      702  }                                                                    
+      703                                                                       
+      704 -// Default TTL by source type (in days)                              
+      705 -const CACHE_TTL_DAYS: Record<string, number> = {                     
+      706 -  youtube: 30,    // YouTube transcripts rarely change               
+      707 -  podcast: 30,    // Podcast transcripts rarely change               
+      708 -  reddit: 7,      // Reddit posts can get new comments               
+      709 -  research: 90,   // Research abstracts are stable                   
+      710 -  scholar: 90,    // Academic content is stable                      
+      711 -  arxiv: 90,      // Preprints are stable once posted                
+      712 -  preprint: 90,   // Preprints are stable                            
+      713 -  sciencedaily: 14, // News articles are fairly stable               
+      714 -};                                                                   
+      704 +// Cache entries never expire automatically - only cleared man       
+          +ually                                                                
+      705 +const CACHE_TTL_YEARS = 100; // Effectively permanent                
+      706                                                                       
+      707  export interface GetCachedContentResult {                            
+      708    content: string;                                                   
+                                                                                
+⏺ Update(src/lib/db.ts)                                                         
+  ⎿  Added 2 lines, removed 2 lines                                             
+      765                                                                       
+      766      const id = crypto.randomUUID();                                  
+      767      const contentHash = await hashContent(content);                  
+      768 -    const ttlDays = CACHE_TTL_DAYS[sourceType] || 14;                
+      768      const now = new Date();                                          
+      770 -    const expiresAt = new Date(now.getTime() + ttlDays * 24 *        
+          -60 * 60 * 1000);                                                     
+      769 +    // Set expiration far in the future - cache is cleared man       
+          +ually, not automatically                                             
+      770 +    const expiresAt = new Date(now.getTime() + CACHE_TTL_YEARS       
+          + * 365 * 24 * 60 * 60 * 1000);                                       
+      771                                                                       
+      772      // Upsert - update if exists, insert if not                      
+      773      await pool.query(                                                
+                                                                                
+⏺ Update(src/app/admin/page.tsx)                                                
+  ⎿  Added 1 line, removed 1 line                                               
+      607                      </button>                                        
+      608                    </div>                                             
+      609                    <p className="text-xs text-[var(--ca-gray)]        
+           mt-3">                                                               
+      610 -                    Cache TTL varies by source type: YouTube/P       
+          -odcasts (30 days), Reddit (7 days), Research (90 days), Scienc       
+          -eDaily (14 days)                                                     
+      610 +                    Cached content is kept permanently until m       
+          +anually cleared.                                                     
+      611                    </p>                                               
+      612                  </div>                                               
+      613                </div>                                                 
+                                                                                
+⏺ Read(docs/content-caching.md)                                                 
+  ⎿  Read 100 lines                                                             
+                                                                                
+⏺ Update(docs/content-caching.md)                                               
+  ⎿  Added 3 lines, removed 12 lines                                            
+      35  )                                                                     
+      36  ```                                                                   
+      37                                                                        
+      38 -### Cache TTLs by Source Type                                         
+      38 +### Cache Retention                                                   
+      39                                                                        
+      40 -Different source types have different cache lifetimes based on        
+         -how frequently their content changes:                                 
+      40 +Cached content is kept **permanently** until manually cleared b       
+         +y an admin. There is no automatic expiration - this ensures max       
+         +imum cache hit rates and avoids unnecessary re-fetching of cont       
+         +ent that rarely changes.                                              
+      41                                                                        
+      42 -| Source Type | TTL (Days) | Rationale |                              
+      43 -|-------------|------------|-----------|                              
+      44 -| YouTube | 30 | Video transcripts rarely change after upload |       
+      45 -| Podcast | 30 | Podcast transcripts are static |                     
+      46 -| Research | 90 | Academic papers are stable once published |         
+      47 -| Scholar | 90 | Google Scholar results are stable |                  
+      48 -| arXiv | 90 | Preprints are stable once posted |                     
+      49 -| Preprint | 90 | bioRxiv/medRxiv content is stable |                 
+      50 -| ScienceDaily | 14 | News articles may get minor updates |           
+      51 -| Reddit | 7 | Posts can receive new comments |                       
+      42 +To clear cache, use the admin dashboard (`/admin` → Cache tab)        
+         +or the DELETE `/api/cache` endpoint.                                  
+      43                                                                        
+      44  ## How It Works                                                       
+      45                                                                        
+                                                                                
+⏺ Search(pattern: "TTL|expir|expire", path: "docs/content-caching.md",          
+        output_mode: "content")                                                 
+  ⎿  Found 10 lines (ctrl+o to expand)                                          
+                                                                                
+⏺ Read(docs/content-caching.md)                                                 
+  ⎿  Read 36 lines                                                              
+                                                                                
+⏺ Update(docs/content-caching.md)                                               
+  ⎿  Added 4 lines, removed 9 lines                                             
+      229                                                                       
+      230  ## Maintenance                                                       
+      231                                                                       
+      232 -### Automatic Expiration                                             
+      233 -                                                                     
+      234 -Cached entries automatically expire based on their TTL. Expire       
+          -d entries are:                                                       
+      235 -- Excluded from cache lookups (via `expires_at > NOW()` check)       
+      236 -- Cleaned up via the "Cleanup Expired" button or POST /api/cac       
+          -he                                                                   
+      237 -                                                                     
+      232  ### Manual Cleanup                                                   
+      233                                                                       
+      234 +Cached content is kept permanently and must be manually cleare       
+          +d when needed.                                                       
+      235 +                                                                     
+      236  From the admin dashboard:                                            
+      237  1. Go to `/admin`                                                    
+      238  2. Click the "Cache" tab                                             
+      243 -3. Use "Cleanup Expired" to remove stale entries                     
+      244 -4. Use "Clear All Cache" for a full reset (use sparingly)            
+      239 +3. Use "Clear All Cache" to remove all cached content                
+      240                                                                       
+      241  ### Storage Considerations                                           
+      242                                                                       
+     ...                                                                        
+      250  Potential enhancements:                                              
+      251  - LRU eviction for very old, low-hit entries                         
+      252  - Compression for large transcripts                                  
+      258 -- Background refresh for popular sources nearing expiration          
+      253 +- Selective cache clearing by source type                            
+      254  - Cache warming for trending/popular sources                         
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && npm  
+      run build 2>&1 | tail -20)                                                
+  ⎿  Route (app)                                                                
+     ┌ ○ /                                                                      
+     ├ ○ /_not-found                                                            
+     … +15 lines (ctrl+o to expand)                                             
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      add -A && git commit -m "Remove automatic cache expiration - keep content 
+      permanently…)                                                             
+  ⎿ [main 15ff1d4] Remove automatic cache expiration - keep content permane     
+    ntly                                                                        
+     3 files changed, 12 insertions(+), 35 deletions(-)                         
+    … +2 lines (ctrl+o to expand)                                               
+                                                                                
+                                                                                
+⏺ Done. Pushed to main (15ff1d4).                                               
+                                                                                
+  Cached content is now kept permanently until you manually clear it from the   
+  admin dashboard. No automatic expiration.                                     
+                                                                                
+✻ Crunched for 1m 18s                                                           
+                                                                                
+❯ Thanks! I noticed 7 errors in the last session where I analyzed around 40     
+  sources. Here they are from our /admin dashboard. Can you glean any           
+  useful information from these?                                                
+                                                                                
+  /api/analyze                                                                  
+  analysis_error                                                                
+  Status: 500                                                                   
+  Jan 19 · 8:14 PM                                                              
+  Message:                                                                      
+                                                                                
+  Failed to parse JSON after repairs: Bad control character in string           
+  literal in JSON at position 22                                                
+                                                                                
+  Request Data:                                                                 
+                                                                                
+  {"sourceId":"podcast-2Psro_ItloY-mod","sourceType":"podcast"}                 
+  /api/analyze                                                                  
+  analysis_error                                                                
+  Status: 500                                                                   
+  Jan 19 · 8:13 PM                                                              
+  Message:                                                                      
+                                                                                
+  Failed to parse JSON after repairs: Bad control character in string           
+  literal in JSON at position 22                                                
+                                                                                
+  Request Data:                                                                 
+                                                                                
+  {"sourceId":"podcast-WwRc2SEo-VI-mod","sourceType":"podcast"}                 
+  /api/analyze                                                                  
+  analysis_error                                                                
+  Status: 500                                                                   
+  Jan 19 · 8:12 PM                                                              
+  Message:                                                                      
+                                                                                
+  Failed to parse JSON after repairs: Bad control character in string           
+  literal in JSON at position 22                                                
+                                                                                
+  Request Data:                                                                 
+                                                                                
+  {"sourceId":"reddit-aome35-mod","sourceType":"reddit"}                        
+  /api/analyze                                                                  
+  analysis_error                                                                
+  Status: 500                                                                   
+  Jan 19 · 8:11 PM                                                              
+  Message:                                                                      
+                                                                                
+  Failed to parse JSON after repairs: Bad control character in string           
+  literal in JSON at position 22                                                
+                                                                                
+  Request Data:                                                                 
+                                                                                
+  {"sourceId":"podcast-eIxVfln02Ss","sourceType":"podcast"}                     
+  /api/analyze                                                                  
+  analysis_error                                                                
+  Status: 500                                                                   
+  Jan 19 · 8:11 PM                                                              
+  Message:                                                                      
+                                                                                
+  Failed to parse JSON after repairs: Bad control character in string           
+  literal in JSON at position 22                                                
+                                                                                
+  Request Data:                                                                 
+                                                                                
+  {"sourceId":"podcast-eIxVfln02Ss","sourceType":"podcast"}                     
+  /api/analyze                                                                  
+  analysis_error                                                                
+  Status: 500                                                                   
+  Jan 19 · 8:09 PM                                                              
+  Message:                                                                      
+                                                                                
+  Failed to parse JSON after repairs: Bad control character in string           
+  literal in JSON at position 22                                                
+                                                                                
+  Request Data:                                                                 
+                                                                                
+  {"sourceId":"reddit-1kutu2z","sourceType":"reddit"}                           
+  /api/analyze                                                                  
+  analysis_error                                                                
+  Status: 500                                                                   
+  Jan 19 · 8:07 PM                                                              
+  Message:                                                                      
+                                                                                
+  Failed to parse JSON after repairs: Bad control character in string           
+  literal in JSON at position 22                                                
+                                                                                
+  Request Data:                                                                 
+                                                                                
+  {"sourceId":"reddit-1kutu2z","sourceType":"reddit"}                           
+                                                                                
+⏺ Good catch. All 7 errors have the same root cause:                            
+                                                                                
+  "Bad control character in string literal in JSON at position 22"              
+                                                                                
+  This is happening because:                                                    
+                                                                                
+  1. Source content contains invisible control characters - Podcast transcripts 
+  and Reddit posts sometimes contain weird characters like form feeds (\f),     
+  vertical tabs (\v), null bytes (\0), or other ASCII control characters (codes 
+  0-31)                                                                         
+  2. Claude echoes these in exactQuote - When Claude quotes from the content, it
+   includes these characters                                                    
+  3. JSON parsing fails - These characters are invalid in JSON strings unless   
+  escaped                                                                       
+                                                                                
+  The fix is to sanitize the source content before sending it to Claude. Let me 
+  add that.                                                                     
+                                                                                
+⏺ Read(src/app/api/analyze/route.ts)                                            
+  ⎿  Read 50 lines                                                              
+                                                                                
+⏺ Update(src/app/api/analyze/route.ts)                                          
+  ⎿  Added 13 lines                                                             
+      372    return parts.length > 0 ? parts.join('\n') : null;                 
+      373  }                                                                    
+      374                                                                       
+      375 +// Sanitize content by removing control characters that break        
+          +JSON parsing                                                         
+      376 +function sanitizeContent(text: string): string {                     
+      377 +  // Remove ASCII control characters (0x00-0x1F) except for co       
+          +mmon whitespace                                                      
+      378 +  // Keep: tab (0x09), newline (0x0A), carriage return (0x0D)        
+      379 +  // Remove: null, bell, backspace, form feed, vertical tab, e       
+          +tc.                                                                  
+      380 +  return text                                                        
+      381 +    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remov       
+          +e control chars                                                      
+      382 +    .replace(/\uFFFD/g, '') // Remove replacement character          
+      383 +    .replace(/[\u200B-\u200D\uFEFF]/g, ''); // Remove zero-wid       
+          +th chars                                                             
+      384 +}                                                                    
+      385 +                                                                     
+      386  // Main analysis function using Claude with prompt caching           
+      387  async function analyzeContent(                                       
+      388    content: string,                                                   
+     ...                                                                        
+      391    product: string,                                                   
+      392    strategy: string                                                   
+      393  ): Promise<{ claims: Claim[]; hooks: Hook[] }> {                     
+      394 +  // Sanitize content to prevent JSON parsing issues                 
+      395 +  const cleanContent = sanitizeContent(content);                     
+      396    // Determine source type priors for awareness classification       
+      397    const sourceTypePrior = {                                          
+      398      arxiv: 'hidden',                                                 
+                                                                                
+⏺ Update(src/app/api/analyze/route.ts)                                          
+  ⎿  Added 1 line, removed 1 line                                               
+      418  STRATEGY: ${strategy === 'translocate' ? 'Find UNEXPECTED conn       
+           ections from this unrelated content' : 'Find DIRECT applicatio       
+           ns to this niche'}                                                   
+      419                                                                       
+      420  CONTENT TO ANALYZE:                                                  
+      421 -${content.slice(0, 15000)}                                           
+      421 +${cleanContent.slice(0, 15000)}                                      
+      422                                                                       
+      423  ---                                                                  
+      424                                                                       
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && npm  
+      run build 2>&1 | tail -20)                                                
+  ⎿  Route (app)                                                                
+     ┌ ○ /                                                                      
+     ├ ○ /_not-found                                                            
+     … +15 lines (ctrl+o to expand)                                             
+                                                                                
+⏺ Bash(cd /Users/coleschaffer/Desktop/Stefan\ Georgi\ Angle\ Finder/app && git  
+      add -A && git commit -m "Fix JSON parse errors from control characters in 
+      source content…)                                                          
+  ⎿  [main 8fe1b42] Fix JSON parse errors from control characters in source     
+     content                                                                    
+      1 file changed, 14 insertions(+), 1 deletion(-)                           
+     … +2 lines (ctrl+o to expand)                                              
+                                                                                
+⏺ Done. Pushed (8fe1b42).                                                       
+                                                                                
+  What was happening:                                                           
+                                                                                
+  Podcast transcripts and Reddit posts sometimes contain invisible "control     
+  characters" - things like:                                                    
+  - \x00 (null byte)                                                            
+  - \x0B (vertical tab)                                                         
+  - \x0C (form feed)                                                            
+  - Zero-width spaces                                                           
+                                                                                
+  When Claude quoted these in the exactQuote field, JSON parsing failed because 
+  these characters are invalid inside JSON strings.                             
+                                                                                
+  The fix:                                                                      
+                                                                                
+  Added sanitizeContent() that strips these characters from the source content  
+  before sending to Claude:                                                     
+                                                                                
+  function sanitizeContent(text: string): string {                              
+    return text                                                                 
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Control chars        
+      .replace(/\uFFFD/g, '')                            // Replacement char    
+      .replace(/[\u200B-\u200D\uFEFF]/g, '');           // Zero-width chars     
+  }                                                                             
+                                                                                
+  This should eliminate those 7 errors you saw. The ~33 successful analyses     
+  already had "clean" content.                                                  
+                                                                                
+✻ Cogitated for 1m 4s                                                           
+
