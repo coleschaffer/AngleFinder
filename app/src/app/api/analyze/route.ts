@@ -47,6 +47,14 @@ function repairAndParseJSON(text: string): any {
   // Common repairs for Claude's JSON output issues
   let repaired = jsonStr;
 
+  // Fix malformed {"<whitespace/newline> pattern (extra quote after opening brace)
+  // This happens when Claude outputs: {"  instead of: {
+  // The parser sees the " and thinks it's starting a string, then fails on the newline
+  repaired = repaired.replace(/\{"\s*\n/g, '{\n');
+
+  // Also fix the pattern at start of arrays: [{"<newline> -> [{<newline>
+  repaired = repaired.replace(/\["\s*\n/g, '[\n');
+
   // Fix trailing commas before closing brackets
   repaired = repaired.replace(/,(\s*[}\]])/g, '$1');
 
