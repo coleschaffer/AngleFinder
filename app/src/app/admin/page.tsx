@@ -607,7 +607,7 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <p className="text-xs text-[var(--ca-gray)] mt-3">
-                    Cache TTL varies by source type: YouTube/Podcasts (30 days), Reddit (7 days), Research (90 days), ScienceDaily (14 days)
+                    Cached content is kept permanently until manually cleared.
                   </p>
                 </div>
               </div>

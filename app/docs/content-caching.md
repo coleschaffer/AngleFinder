@@ -35,20 +35,11 @@ CREATE TABLE source_content_cache (
 )
 ```
 
-### Cache TTLs by Source Type
+### Cache Retention
 
-Different source types have different cache lifetimes based on how frequently their content changes:
+Cached content is kept **permanently** until manually cleared by an admin. There is no automatic expiration - this ensures maximum cache hit rates and avoids unnecessary re-fetching of content that rarely changes.
 
-| Source Type | TTL (Days) | Rationale |
-|-------------|------------|-----------|
-| YouTube | 30 | Video transcripts rarely change after upload |
-| Podcast | 30 | Podcast transcripts are static |
-| Research | 90 | Academic papers are stable once published |
-| Scholar | 90 | Google Scholar results are stable |
-| arXiv | 90 | Preprints are stable once posted |
-| Preprint | 90 | bioRxiv/medRxiv content is stable |
-| ScienceDaily | 14 | News articles may get minor updates |
-| Reddit | 7 | Posts can receive new comments |
+To clear cache, use the admin dashboard (`/admin` → Cache tab) or the DELETE `/api/cache` endpoint.
 
 ## How It Works
 
@@ -238,19 +229,14 @@ GROUP BY source_type;
 
 ## Maintenance
 
-### Automatic Expiration
-
-Cached entries automatically expire based on their TTL. Expired entries are:
-- Excluded from cache lookups (via `expires_at > NOW()` check)
-- Cleaned up via the "Cleanup Expired" button or POST /api/cache
-
 ### Manual Cleanup
+
+Cached content is kept permanently and must be manually cleared when needed.
 
 From the admin dashboard:
 1. Go to `/admin`
 2. Click the "Cache" tab
-3. Use "Cleanup Expired" to remove stale entries
-4. Use "Clear All Cache" for a full reset (use sparingly)
+3. Use "Clear All Cache" to remove all cached content
 
 ### Storage Considerations
 
@@ -264,5 +250,5 @@ From the admin dashboard:
 Potential enhancements:
 - LRU eviction for very old, low-hit entries
 - Compression for large transcripts
-- Background refresh for popular sources nearing expiration
+- Selective cache clearing by source type
 - Cache warming for trending/popular sources

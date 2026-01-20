@@ -701,17 +701,8 @@ export async function initContentCacheTable() {
   }
 }
 
-// Default TTL by source type (in days)
-const CACHE_TTL_DAYS: Record<string, number> = {
-  youtube: 30,    // YouTube transcripts rarely change
-  podcast: 30,    // Podcast transcripts rarely change
-  reddit: 7,      // Reddit posts can get new comments
-  research: 90,   // Research abstracts are stable
-  scholar: 90,    // Academic content is stable
-  arxiv: 90,      // Preprints are stable once posted
-  preprint: 90,   // Preprints are stable
-  sciencedaily: 14, // News articles are fairly stable
-};
+// Cache entries never expire automatically - only cleared manually
+const CACHE_TTL_YEARS = 100; // Effectively permanent
 
 export interface GetCachedContentResult {
   content: string;
@@ -774,9 +765,9 @@ export async function setCachedContent(
 
     const id = crypto.randomUUID();
     const contentHash = await hashContent(content);
-    const ttlDays = CACHE_TTL_DAYS[sourceType] || 14;
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
+    // Set expiration far in the future - cache is cleared manually, not automatically
+    const expiresAt = new Date(now.getTime() + CACHE_TTL_YEARS * 365 * 24 * 60 * 60 * 1000);
 
     // Upsert - update if exists, insert if not
     await pool.query(
