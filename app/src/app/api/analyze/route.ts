@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Supadata } from '@supadata/js';
-import { Source, AnalysisResult, Claim, Hook, ViralityScore, BridgeDistance, AngleType, AwarenessLevel } from '@/types';
-import { logError } from '@/lib/db';
+import { Source, AnalysisResult, Claim, Hook, ViralityScore, BridgeDistance, AngleType, AwarenessLevel, SourceType } from '@/types';
+import { logError, getCachedContent, setCachedContent } from '@/lib/db';
 import { withRetry, ANALYSIS_SYSTEM_PROMPT } from '@/lib/anthropic';
 
 // Initialize Supadata client for YouTube transcripts
@@ -606,33 +606,56 @@ export async function POST(request: NextRequest) {
 
     console.log(`Analyzing source: ${source.id} (${source.type})`);
 
-    // Get content based on source type
+    // Check cache first
     let content: string | null = null;
+    let cacheHit = false;
+    const cachedResult = await getCachedContent(source.url);
 
-    if (source.type === 'youtube' || source.type === 'podcast') {
-      const videoId = source.url.match(/(?:v=|\/)([\w-]{11})/)?.[1];
-      if (videoId) {
-        content = await getYouTubeContent(videoId);
-      }
-    } else if (source.type === 'reddit') {
-      content = await getRedditContent(source.url);
-    } else if (source.type === 'research' || source.type === 'scholar' || source.type === 'arxiv' || source.type === 'preprint') {
-      // Academic sources - use stored abstract/snippet first
-      content = getAcademicContent(source);
+    if (cachedResult) {
+      content = cachedResult.content;
+      cacheHit = true;
+      console.log(`[CACHE HIT] ${source.id}: Using cached content (${content.length} chars, hit #${cachedResult.hitCount})`);
+    } else {
+      console.log(`[CACHE MISS] ${source.id}: Fetching fresh content`);
 
-      // Fallback: fetch PubMed abstract if not stored
-      if ((!content || content.length < 100) && source.type === 'research') {
-        const pmid = source.url.match(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d+)/)?.[1] ||
-                     source.url.match(/\/(\d+)\/?$/)?.[1];
-        if (pmid) {
-          content = await getPubMedAbstract(pmid);
+      // Track fetch start time for cache stats
+      const fetchStartTime = Date.now();
+
+      // Get content based on source type
+      if (source.type === 'youtube' || source.type === 'podcast') {
+        const videoId = source.url.match(/(?:v=|\/)([\w-]{11})/)?.[1];
+        if (videoId) {
+          content = await getYouTubeContent(videoId);
         }
+      } else if (source.type === 'reddit') {
+        content = await getRedditContent(source.url);
+      } else if (source.type === 'research' || source.type === 'scholar' || source.type === 'arxiv' || source.type === 'preprint') {
+        // Academic sources - use stored abstract/snippet first
+        content = getAcademicContent(source);
+
+        // Fallback: fetch PubMed abstract if not stored
+        if ((!content || content.length < 100) && source.type === 'research') {
+          const pmid = source.url.match(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d+)/)?.[1] ||
+                       source.url.match(/\/(\d+)\/?$/)?.[1];
+          if (pmid) {
+            content = await getPubMedAbstract(pmid);
+          }
+        }
+      } else if (source.type === 'sciencedaily') {
+        content = await getScienceDailyContent(source.url);
       }
-    } else if (source.type === 'sciencedaily') {
-      content = await getScienceDailyContent(source.url);
+
+      const fetchDurationMs = Date.now() - fetchStartTime;
+
+      // Cache the content if we got valid content
+      if (content && content.length >= 100) {
+        console.log(`[CACHE STORE] ${source.id}: Caching content (${content.length} chars, fetched in ${fetchDurationMs}ms)`);
+        await setCachedContent(source.url, source.type as SourceType, content, fetchDurationMs);
+      }
     }
 
     // If we couldn't get content, use Claude to analyze based on title/metadata
+    // (Don't cache metadata fallbacks as they're not real content)
     if (!content || content.length < 100) {
       console.log(`No content found for ${source.id}, using title/metadata fallback`);
       content = `Title: ${source.title}\nSource: ${source.url}\nType: ${source.type}`;
@@ -646,7 +669,7 @@ ${source.author ? `Author/Channel: ${source.author}` : ''}
 Based on this title and your knowledge of this topic, provide an analysis as if you had access to the full content.`;
 
       content = metaPrompt;
-    } else {
+    } else if (!cacheHit) {
       console.log(`Content found for ${source.id}: ${content.length} chars`);
     }
 

@@ -25,6 +25,8 @@ import {
   Cpu,
   ArrowUpRight,
   ArrowDownRight,
+  HardDrive,
+  CheckCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -134,7 +136,18 @@ interface UsageSummary {
   recentRequests: UsageEntry[];
 }
 
-type Tab = 'feedback' | 'analytics' | 'errors' | 'usage';
+interface ContentCacheStats {
+  totalEntries: number;
+  totalSizeBytes: number;
+  totalHits: number;
+  bySourceType: Record<string, { count: number; sizeBytes: number; hits: number }>;
+  avgFetchDurationMs: number;
+  oldestEntry: string | null;
+  newestEntry: string | null;
+  expiredCount: number;
+}
+
+type Tab = 'feedback' | 'analytics' | 'errors' | 'usage' | 'cache';
 
 const awarenessConfig = {
   hidden: { label: 'Hidden', color: '#22C55E', Icon: EyeOff },
@@ -159,6 +172,7 @@ export default function AdminPage() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [errorsData, setErrorsData] = useState<ErrorsData | null>(null);
   const [usageData, setUsageData] = useState<UsageSummary | null>(null);
+  const [cacheData, setCacheData] = useState<ContentCacheStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadFeedback = async () => {
@@ -209,9 +223,21 @@ export default function AdminPage() {
     }
   };
 
+  const loadCache = async () => {
+    try {
+      const response = await fetch('/api/cache');
+      if (response.ok) {
+        const data = await response.json();
+        setCacheData(data);
+      }
+    } catch (error) {
+      console.error('Error loading cache stats:', error);
+    }
+  };
+
   const loadData = async () => {
     setIsLoading(true);
-    await Promise.all([loadFeedback(), loadAnalytics(), loadErrors(), loadUsage()]);
+    await Promise.all([loadFeedback(), loadAnalytics(), loadErrors(), loadUsage(), loadCache()]);
     setIsLoading(false);
   };
 
@@ -291,6 +317,33 @@ export default function AdminPage() {
     }
   };
 
+  const cleanupExpiredCache = async () => {
+    try {
+      const response = await fetch('/api/cache', { method: 'POST' });
+      if (response.ok) {
+        const data = await response.json();
+        alert(`Cleaned up ${data.cleared} expired cache entries`);
+        loadCache();
+      }
+    } catch (error) {
+      console.error('Error cleaning up cache:', error);
+    }
+  };
+
+  const clearAllCache = async () => {
+    if (confirm('Are you sure you want to clear ALL cached content? This will cause all sources to be re-fetched on next analysis.')) {
+      try {
+        const response = await fetch('/api/cache', { method: 'DELETE' });
+        if (response.ok) {
+          setCacheData(null);
+          loadCache();
+        }
+      } catch (error) {
+        console.error('Error clearing cache:', error);
+      }
+    }
+  };
+
   // Format token counts for display
   const formatTokens = (tokens: number): string => {
     if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`;
@@ -302,6 +355,13 @@ export default function AdminPage() {
   const formatDuration = (ms: number): string => {
     if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
     return `${ms}ms`;
+  };
+
+  // Format bytes for display
+  const formatBytes = (bytes: number): string => {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${bytes} B`;
   };
 
   return (
@@ -393,11 +453,165 @@ export default function AdminPage() {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('cache')}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'cache'
+                ? 'border-[var(--ca-gold)] text-[var(--ca-gold)]'
+                : 'border-transparent text-[var(--ca-gray-light)] hover:text-white'
+            }`}
+          >
+            <HardDrive className="w-4 h-4" />
+            Cache
+            {cacheData && cacheData.totalEntries > 0 && (
+              <span className="px-1.5 py-0.5 text-xs bg-purple-500/20 text-purple-400 rounded-full">
+                {cacheData.totalEntries}
+              </span>
+            )}
+          </button>
         </div>
 
         {isLoading ? (
           <div className="text-center py-20">
             <p className="text-[var(--ca-gray-light)]">Loading...</p>
+          </div>
+        ) : activeTab === 'cache' ? (
+          /* Cache Tab */
+          <div>
+            {!cacheData || cacheData.totalEntries === 0 ? (
+              <div className="text-center py-20">
+                <HardDrive className="w-12 h-12 text-[var(--ca-gray)] mx-auto mb-4" />
+                <p className="text-[var(--ca-gray-light)]">No cached content yet</p>
+                <p className="text-sm text-[var(--ca-gray)] mt-1">
+                  Source content will be cached here to speed up repeat analyses
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Cache Stats Overview */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Database className="w-4 h-4 text-purple-400" />
+                      <span className="text-xs text-[var(--ca-gray-light)]">Cached Sources</span>
+                    </div>
+                    <div className="text-2xl font-bold text-purple-400">{cacheData.totalEntries}</div>
+                    <div className="text-xs text-[var(--ca-gray)] mt-1">Active entries</div>
+                  </div>
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <HardDrive className="w-4 h-4 text-blue-400" />
+                      <span className="text-xs text-[var(--ca-gray-light)]">Total Size</span>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-400">{formatBytes(cacheData.totalSizeBytes)}</div>
+                    <div className="text-xs text-[var(--ca-gray)] mt-1">Stored content</div>
+                  </div>
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      <span className="text-xs text-[var(--ca-gray-light)]">Cache Hits</span>
+                    </div>
+                    <div className="text-2xl font-bold text-green-400">{cacheData.totalHits}</div>
+                    <div className="text-xs text-[var(--ca-gray)] mt-1">Times served from cache</div>
+                  </div>
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-[var(--ca-gold)]" />
+                      <span className="text-xs text-[var(--ca-gray-light)]">Avg Fetch Time</span>
+                    </div>
+                    <div className="text-2xl font-bold text-[var(--ca-gold)]">{formatDuration(cacheData.avgFetchDurationMs)}</div>
+                    <div className="text-xs text-[var(--ca-gray)] mt-1">Time saved per hit</div>
+                  </div>
+                </div>
+
+                {/* Cache by Source Type */}
+                {Object.keys(cacheData.bySourceType).length > 0 && (
+                  <div className="card">
+                    <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                      Cache by Source Type
+                    </h3>
+                    <div className="space-y-3">
+                      {Object.entries(cacheData.bySourceType)
+                        .sort(([, a], [, b]) => b.count - a.count)
+                        .map(([sourceType, stats]) => (
+                          <div key={sourceType} className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium capitalize">{sourceType}</span>
+                              <span className="text-purple-400 font-bold">{stats.count} sources</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-[var(--ca-gray-light)]">
+                              <span>Size: {formatBytes(stats.sizeBytes)}</span>
+                              <span>·</span>
+                              <span>Hits: {stats.hits}</span>
+                              <span>·</span>
+                              <span>Avg: {formatBytes(stats.count > 0 ? stats.sizeBytes / stats.count : 0)}/source</span>
+                            </div>
+                            <div className="h-2 bg-[var(--ca-black)] rounded-full overflow-hidden mt-2">
+                              <div
+                                className="h-full bg-purple-400 rounded-full"
+                                style={{
+                                  width: `${Math.min(100, (stats.count / cacheData.totalEntries) * 100)}%`
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cache Timeline */}
+                <div className="card">
+                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                    Cache Timeline
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                      <div className="text-xs text-[var(--ca-gray-light)] mb-1">Oldest Entry</div>
+                      <div className="text-sm font-medium">
+                        {cacheData.oldestEntry
+                          ? format(new Date(cacheData.oldestEntry), 'MMM d, yyyy · h:mm a')
+                          : 'N/A'}
+                      </div>
+                    </div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
+                      <div className="text-xs text-[var(--ca-gray-light)] mb-1">Newest Entry</div>
+                      <div className="text-sm font-medium">
+                        {cacheData.newestEntry
+                          ? format(new Date(cacheData.newestEntry), 'MMM d, yyyy · h:mm a')
+                          : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cache Actions */}
+                <div className="card">
+                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
+                    Cache Management
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={cleanupExpiredCache}
+                      className="btn btn-secondary"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Cleanup Expired ({cacheData.expiredCount})
+                    </button>
+                    <button
+                      onClick={clearAllCache}
+                      className="btn btn-ghost text-red-400 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Clear All Cache
+                    </button>
+                  </div>
+                  <p className="text-xs text-[var(--ca-gray)] mt-3">
+                    Cache TTL varies by source type: YouTube/Podcasts (30 days), Reddit (7 days), Research (90 days), ScienceDaily (14 days)
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         ) : activeTab === 'usage' ? (
           /* Usage Tab */

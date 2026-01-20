@@ -649,3 +649,263 @@ export async function getUsageSummary(): Promise<UsageSummary> {
 export async function clearAllUsage(): Promise<void> {
   await pool.query('DELETE FROM api_usage');
 }
+
+// ============================================
+// Source Content Caching Functions
+// ============================================
+
+export interface CachedContent {
+  id: string;
+  sourceUrl: string;
+  sourceType: SourceType;
+  contentHash: string;
+  content: string;
+  contentLength: number;
+  fetchDurationMs: number;
+  createdAt: string;
+  expiresAt: string;
+  hitCount: number;
+  lastAccessedAt: string;
+}
+
+export async function initContentCacheTable() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS source_content_cache (
+        id UUID PRIMARY KEY,
+        source_url TEXT NOT NULL UNIQUE,
+        source_type VARCHAR(50) NOT NULL,
+        content_hash VARCHAR(64) NOT NULL,
+        content TEXT NOT NULL,
+        content_length INTEGER NOT NULL DEFAULT 0,
+        fetch_duration_ms INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        hit_count INTEGER NOT NULL DEFAULT 0,
+        last_accessed_at TIMESTAMP WITH TIME ZONE NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_content_cache_url ON source_content_cache (source_url);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_content_cache_expires ON source_content_cache (expires_at);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_content_cache_type ON source_content_cache (source_type);
+    `);
+  } finally {
+    client.release();
+  }
+}
+
+// Default TTL by source type (in days)
+const CACHE_TTL_DAYS: Record<string, number> = {
+  youtube: 30,    // YouTube transcripts rarely change
+  podcast: 30,    // Podcast transcripts rarely change
+  reddit: 7,      // Reddit posts can get new comments
+  research: 90,   // Research abstracts are stable
+  scholar: 90,    // Academic content is stable
+  arxiv: 90,      // Preprints are stable once posted
+  preprint: 90,   // Preprints are stable
+  sciencedaily: 14, // News articles are fairly stable
+};
+
+export interface GetCachedContentResult {
+  content: string;
+  cacheHit: boolean;
+  cachedAt?: string;
+  hitCount?: number;
+}
+
+/**
+ * Get cached content for a source URL
+ * Returns null if not cached or expired
+ */
+export async function getCachedContent(sourceUrl: string): Promise<GetCachedContentResult | null> {
+  try {
+    await initContentCacheTable();
+
+    const result = await pool.query(
+      `SELECT content, created_at, hit_count
+       FROM source_content_cache
+       WHERE source_url = $1 AND expires_at > NOW()`,
+      [sourceUrl]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    // Update hit count and last accessed time
+    await pool.query(
+      `UPDATE source_content_cache
+       SET hit_count = hit_count + 1, last_accessed_at = NOW()
+       WHERE source_url = $1`,
+      [sourceUrl]
+    );
+
+    const row = result.rows[0];
+    return {
+      content: row.content,
+      cacheHit: true,
+      cachedAt: row.created_at.toISOString(),
+      hitCount: row.hit_count + 1,
+    };
+  } catch (err) {
+    console.error('Failed to get cached content:', err);
+    return null;
+  }
+}
+
+/**
+ * Store content in cache
+ */
+export async function setCachedContent(
+  sourceUrl: string,
+  sourceType: SourceType,
+  content: string,
+  fetchDurationMs: number
+): Promise<void> {
+  try {
+    await initContentCacheTable();
+
+    const id = crypto.randomUUID();
+    const contentHash = await hashContent(content);
+    const ttlDays = CACHE_TTL_DAYS[sourceType] || 14;
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
+
+    // Upsert - update if exists, insert if not
+    await pool.query(
+      `INSERT INTO source_content_cache
+       (id, source_url, source_type, content_hash, content, content_length, fetch_duration_ms,
+        created_at, expires_at, hit_count, last_accessed_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $8)
+       ON CONFLICT (source_url) DO UPDATE SET
+         content = EXCLUDED.content,
+         content_hash = EXCLUDED.content_hash,
+         content_length = EXCLUDED.content_length,
+         fetch_duration_ms = EXCLUDED.fetch_duration_ms,
+         created_at = EXCLUDED.created_at,
+         expires_at = EXCLUDED.expires_at,
+         last_accessed_at = EXCLUDED.last_accessed_at`,
+      [
+        id,
+        sourceUrl,
+        sourceType,
+        contentHash,
+        content,
+        content.length,
+        fetchDurationMs,
+        now.toISOString(),
+        expiresAt.toISOString(),
+      ]
+    );
+  } catch (err) {
+    console.error('Failed to cache content:', err);
+    // Silent fail - don't let caching break the app
+  }
+}
+
+/**
+ * Simple hash function for content (for change detection)
+ */
+async function hashContent(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Get cache statistics for admin dashboard
+ */
+export interface ContentCacheStats {
+  totalEntries: number;
+  totalSizeBytes: number;
+  totalHits: number;
+  bySourceType: Record<string, { count: number; sizeBytes: number; hits: number }>;
+  avgFetchDurationMs: number;
+  oldestEntry: string | null;
+  newestEntry: string | null;
+  expiredCount: number;
+}
+
+export async function getContentCacheStats(): Promise<ContentCacheStats> {
+  await initContentCacheTable();
+
+  // Overall stats
+  const overallResult = await pool.query(`
+    SELECT
+      COUNT(*) as total_entries,
+      COALESCE(SUM(content_length), 0) as total_size,
+      COALESCE(SUM(hit_count), 0) as total_hits,
+      COALESCE(AVG(fetch_duration_ms), 0) as avg_fetch_duration,
+      MIN(created_at) as oldest_entry,
+      MAX(created_at) as newest_entry
+    FROM source_content_cache
+    WHERE expires_at > NOW()
+  `);
+  const overall = overallResult.rows[0];
+
+  // By source type
+  const byTypeResult = await pool.query(`
+    SELECT
+      source_type,
+      COUNT(*) as count,
+      COALESCE(SUM(content_length), 0) as size_bytes,
+      COALESCE(SUM(hit_count), 0) as hits
+    FROM source_content_cache
+    WHERE expires_at > NOW()
+    GROUP BY source_type
+  `);
+  const bySourceType: Record<string, { count: number; sizeBytes: number; hits: number }> = {};
+  byTypeResult.rows.forEach((row: any) => {
+    bySourceType[row.source_type] = {
+      count: parseInt(row.count, 10),
+      sizeBytes: parseInt(row.size_bytes, 10),
+      hits: parseInt(row.hits, 10),
+    };
+  });
+
+  // Expired count
+  const expiredResult = await pool.query(`
+    SELECT COUNT(*) as count
+    FROM source_content_cache
+    WHERE expires_at <= NOW()
+  `);
+  const expiredCount = parseInt(expiredResult.rows[0].count, 10);
+
+  return {
+    totalEntries: parseInt(overall.total_entries, 10),
+    totalSizeBytes: parseInt(overall.total_size, 10),
+    totalHits: parseInt(overall.total_hits, 10),
+    bySourceType,
+    avgFetchDurationMs: Math.round(parseFloat(overall.avg_fetch_duration)),
+    oldestEntry: overall.oldest_entry ? overall.oldest_entry.toISOString() : null,
+    newestEntry: overall.newest_entry ? overall.newest_entry.toISOString() : null,
+    expiredCount,
+  };
+}
+
+/**
+ * Clear expired cache entries
+ */
+export async function clearExpiredCache(): Promise<number> {
+  await initContentCacheTable();
+  const result = await pool.query(
+    `DELETE FROM source_content_cache WHERE expires_at <= NOW() RETURNING id`
+  );
+  return result.rowCount || 0;
+}
+
+/**
+ * Clear all cache entries
+ */
+export async function clearAllCache(): Promise<void> {
+  await pool.query('DELETE FROM source_content_cache');
+}
