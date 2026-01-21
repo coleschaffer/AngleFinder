@@ -27,6 +27,9 @@ import {
   ArrowDownRight,
   HardDrive,
   CheckCircle,
+  Copy,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -174,6 +177,8 @@ export default function AdminPage() {
   const [usageData, setUsageData] = useState<UsageSummary | null>(null);
   const [cacheData, setCacheData] = useState<ContentCacheStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedErrorIds, setSelectedErrorIds] = useState<Set<string>>(new Set());
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const loadFeedback = async () => {
     try {
@@ -341,6 +346,62 @@ export default function AdminPage() {
       } catch (error) {
         console.error('Error clearing cache:', error);
       }
+    }
+  };
+
+  // Error selection helpers
+  const toggleErrorSelection = (errorId: string) => {
+    setSelectedErrorIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(errorId)) {
+        newSet.delete(errorId);
+      } else {
+        newSet.add(errorId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAllErrors = () => {
+    if (!errorsData) return;
+    if (selectedErrorIds.size === errorsData.errors.length) {
+      setSelectedErrorIds(new Set());
+    } else {
+      setSelectedErrorIds(new Set(errorsData.errors.map(e => e.id)));
+    }
+  };
+
+  const copySelectedErrors = async () => {
+    if (!errorsData || selectedErrorIds.size === 0) return;
+
+    const selectedErrors = errorsData.errors.filter(e => selectedErrorIds.has(e.id));
+    const formattedErrors = selectedErrors.map(error => {
+      let text = `=== Error: ${error.endpoint} ===\n`;
+      text += `Type: ${error.errorType}\n`;
+      text += `Status: ${error.statusCode || 'N/A'}\n`;
+      text += `Time: ${format(new Date(error.timestamp), 'MMM d, yyyy · h:mm:ss a')}\n`;
+      text += `Message: ${error.message}\n`;
+      if (error.requestData) {
+        text += `\nRequest Data:\n${error.requestData}\n`;
+      }
+      return text;
+    }).join('\n\n');
+
+    try {
+      await navigator.clipboard.writeText(formattedErrors);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      // Fallback: create a temporary textarea
+      const textarea = document.createElement('textarea');
+      textarea.value = formattedErrors;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
     }
   };
 
@@ -933,66 +994,126 @@ export default function AdminPage() {
                 {/* Recent Errors */}
                 <div className="card">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider">
-                      Recent Errors
-                    </h3>
-                    <button
-                      onClick={clearAllErrors}
-                      className="btn btn-ghost text-red-400 hover:bg-red-500/10 text-xs py-1 px-2"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      Clear All
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider">
+                        Recent Errors
+                      </h3>
+                      {errorsData.errors.length > 0 && (
+                        <button
+                          onClick={toggleSelectAllErrors}
+                          className="btn btn-ghost text-xs py-1 px-2 text-[var(--ca-gray-light)] hover:text-white"
+                          title={selectedErrorIds.size === errorsData.errors.length ? 'Deselect all' : 'Select all'}
+                        >
+                          {selectedErrorIds.size === errorsData.errors.length ? (
+                            <CheckSquare className="w-4 h-4" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                          <span className="ml-1">
+                            {selectedErrorIds.size === errorsData.errors.length ? 'Deselect All' : 'Select All'}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {selectedErrorIds.size > 0 && (
+                        <button
+                          onClick={copySelectedErrors}
+                          className={`btn text-xs py-1 px-2 ${
+                            copySuccess
+                              ? 'btn-primary bg-green-600 hover:bg-green-700'
+                              : 'btn-secondary'
+                          }`}
+                        >
+                          {copySuccess ? (
+                            <>
+                              <CheckCircle className="w-3 h-3" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              Copy {selectedErrorIds.size} Selected
+                            </>
+                          )}
+                        </button>
+                      )}
+                      <button
+                        onClick={clearAllErrors}
+                        className="btn btn-ghost text-red-400 hover:bg-red-500/10 text-xs py-1 px-2"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Clear All
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2 max-h-[500px] overflow-y-auto">
                     {errorsData.errors.map((error) => (
-                      <details
+                      <div
                         key={error.id}
-                        className="group bg-[var(--ca-gray-dark)]/50 rounded-lg"
+                        className={`bg-[var(--ca-gray-dark)]/50 rounded-lg ${
+                          selectedErrorIds.has(error.id) ? 'ring-2 ring-[var(--ca-gold)]' : ''
+                        }`}
                       >
-                        <summary className="flex items-center justify-between p-3 cursor-pointer list-none hover:bg-[var(--ca-gray-dark)] rounded-lg transition-colors">
-                          <div className="flex items-center gap-3">
-                            <AlertTriangle className={`w-4 h-4 ${
-                              error.errorType === 'rate_limit' ? 'text-orange-400' : 'text-red-400'
-                            }`} />
-                            <div>
-                              <div className="text-sm font-mono">{error.endpoint}</div>
-                              <div className="flex items-center gap-2 text-xs text-[var(--ca-gray-light)]">
-                                <span className={`px-1.5 py-0.5 rounded ${
-                                  error.errorType === 'rate_limit'
-                                    ? 'bg-orange-500/20 text-orange-400'
-                                    : 'bg-red-500/20 text-red-400'
-                                }`}>
-                                  {error.errorType}
-                                </span>
-                                {error.statusCode && (
-                                  <span>Status: {error.statusCode}</span>
+                        <details className="group">
+                          <summary className="flex items-center justify-between p-3 cursor-pointer list-none hover:bg-[var(--ca-gray-dark)] rounded-lg transition-colors">
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleErrorSelection(error.id);
+                                }}
+                                className="p-1 hover:bg-[var(--ca-gray)] rounded transition-colors"
+                              >
+                                {selectedErrorIds.has(error.id) ? (
+                                  <CheckSquare className="w-4 h-4 text-[var(--ca-gold)]" />
+                                ) : (
+                                  <Square className="w-4 h-4 text-[var(--ca-gray-light)]" />
                                 )}
+                              </button>
+                              <AlertTriangle className={`w-4 h-4 ${
+                                error.errorType === 'rate_limit' ? 'text-orange-400' : 'text-red-400'
+                              }`} />
+                              <div>
+                                <div className="text-sm font-mono">{error.endpoint}</div>
+                                <div className="flex items-center gap-2 text-xs text-[var(--ca-gray-light)]">
+                                  <span className={`px-1.5 py-0.5 rounded ${
+                                    error.errorType === 'rate_limit'
+                                      ? 'bg-orange-500/20 text-orange-400'
+                                      : 'bg-red-500/20 text-red-400'
+                                  }`}>
+                                    {error.errorType}
+                                  </span>
+                                  {error.statusCode && (
+                                    <span>Status: {error.statusCode}</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-xs text-[var(--ca-gray-light)]">
-                            {format(new Date(error.timestamp), 'MMM d · h:mm a')}
-                          </div>
-                        </summary>
-                        <div className="px-3 pb-3 pt-1 border-t border-[var(--ca-gray-dark)] space-y-2">
-                          <div>
-                            <p className="text-xs text-[var(--ca-gray-light)] mb-1">Message:</p>
-                            <p className="text-sm text-red-300 font-mono text-xs break-all">
-                              {error.message.slice(0, 500)}
-                              {error.message.length > 500 && '...'}
-                            </p>
-                          </div>
-                          {error.requestData && (
-                            <div>
-                              <p className="text-xs text-[var(--ca-gray-light)] mb-1">Request Data:</p>
-                              <pre className="text-xs text-[var(--ca-gray)] font-mono bg-[var(--ca-black)] p-2 rounded overflow-x-auto">
-                                {error.requestData}
-                              </pre>
+                            <div className="text-xs text-[var(--ca-gray-light)]">
+                              {format(new Date(error.timestamp), 'MMM d · h:mm a')}
                             </div>
-                          )}
-                        </div>
-                      </details>
+                          </summary>
+                          <div className="px-3 pb-3 pt-1 border-t border-[var(--ca-gray-dark)] space-y-2">
+                            <div>
+                              <p className="text-xs text-[var(--ca-gray-light)] mb-1">Message:</p>
+                              <p className="text-sm text-red-300 font-mono text-xs break-all">
+                                {error.message.slice(0, 500)}
+                                {error.message.length > 500 && '...'}
+                              </p>
+                            </div>
+                            {error.requestData && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray-light)] mb-1">Request Data:</p>
+                                <pre className="text-xs text-[var(--ca-gray)] font-mono bg-[var(--ca-black)] p-2 rounded overflow-x-auto max-h-[300px] overflow-y-auto">
+                                  {error.requestData}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                      </div>
                     ))}
                   </div>
                 </div>
