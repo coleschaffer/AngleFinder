@@ -4,13 +4,20 @@ import { Source, AnalysisResult, Claim, Hook, ViralityScore, BridgeDistance, Ang
 import { logError, getCachedContent, setCachedContent } from '@/lib/db';
 import { withRetry, ANALYSIS_SYSTEM_PROMPT } from '@/lib/anthropic';
 
-// Custom error class to include raw response for debugging
+// Generate a short unique request ID for tracing
+function generateRequestId(): string {
+  return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+// Custom error class to include raw response and request ID for debugging
 class AnalysisParseError extends Error {
   rawResponse: string;
-  constructor(message: string, rawResponse: string) {
+  requestId: string;
+  constructor(message: string, rawResponse: string, requestId: string) {
     super(message);
     this.name = 'AnalysisParseError';
     this.rawResponse = rawResponse;
+    this.requestId = requestId;
   }
 }
 
@@ -20,7 +27,13 @@ const supadata = process.env.SUPADATA_API_KEY
   : null;
 
 // Attempt to repair and parse malformed JSON from Claude
-function repairAndParseJSON(text: string): any {
+function repairAndParseJSON(text: string, requestId: string): any {
+  const trace = (stage: string, msg: string, data?: any) => {
+    console.log(`[${requestId}] [PARSE:${stage}] ${msg}`, data !== undefined ? JSON.stringify(data).slice(0, 200) : '');
+  };
+
+  trace('INPUT', `Received text length: ${text.length}, starts with: ${text.slice(0, 50).replace(/\n/g, '\\n')}`);
+
   // First, try to extract JSON block
   let jsonStr = text;
 
@@ -28,38 +41,58 @@ function repairAndParseJSON(text: string): any {
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (codeBlockMatch) {
     jsonStr = codeBlockMatch[1].trim();
+    trace('EXTRACT', `Extracted from code block, length: ${jsonStr.length}`);
   } else {
     // Find the outermost JSON object
     const startIdx = text.indexOf('{');
     const endIdx = text.lastIndexOf('}');
     if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
       jsonStr = text.slice(startIdx, endIdx + 1);
+      trace('EXTRACT', `Extracted via brace detection, length: ${jsonStr.length}`);
+    } else {
+      trace('EXTRACT', `No extraction needed or possible`);
     }
+  }
+
+  // Log the first 100 chars of extracted JSON for debugging
+  trace('EXTRACTED', `First 100 chars: ${jsonStr.slice(0, 100).replace(/\n/g, '\\n')}`);
+
+  // Log char codes around position 22 specifically (where errors occur)
+  if (jsonStr.length > 30) {
+    const charCodes15to35 = Array.from(jsonStr.slice(15, 35)).map(c => c.charCodeAt(0));
+    trace('CHARS', `Positions 15-35 char codes: [${charCodes15to35.join(',')}]`);
   }
 
   // Try parsing as-is first
   try {
-    return JSON.parse(jsonStr);
+    const result = JSON.parse(jsonStr);
+    trace('SUCCESS', `Parsed on first attempt`);
+    return result;
   } catch (firstError) {
-    console.log('Initial JSON parse failed, attempting repair...');
+    trace('FAIL1', `Initial parse failed: ${(firstError as Error).message}`);
   }
 
   // Common repairs for Claude's JSON output issues
   let repaired = jsonStr;
 
   // Fix malformed {"<whitespace/newline> pattern (extra quote after opening brace)
-  // This happens when Claude outputs: {"  instead of: {
-  // The parser sees the " and thinks it's starting a string, then fails on the newline
+  const braceQuoteMatches = repaired.match(/\{"\s*\n/g);
+  if (braceQuoteMatches) {
+    trace('REPAIR', `Found ${braceQuoteMatches.length} malformed {"\\n patterns`);
+  }
   repaired = repaired.replace(/\{"\s*\n/g, '{\n');
 
   // Also fix the pattern at start of arrays: [{"<newline> -> [{<newline>
+  const bracketQuoteMatches = repaired.match(/\["\s*\n/g);
+  if (bracketQuoteMatches) {
+    trace('REPAIR', `Found ${bracketQuoteMatches.length} malformed ["\\n patterns`);
+  }
   repaired = repaired.replace(/\["\s*\n/g, '[\n');
 
   // Fix trailing commas before closing brackets
   repaired = repaired.replace(/,(\s*[}\]])/g, '$1');
 
   // Fix missing commas between array elements or object properties
-  // Pattern: "value" followed by whitespace then "key" or opening bracket
   repaired = repaired.replace(/"(\s*)\n(\s*)"(?=[a-zA-Z])/g, '",\n$2"');
   repaired = repaired.replace(/}(\s*)\n(\s*){/g, '},\n$2{');
   repaired = repaired.replace(/](\s*)\n(\s*)\[/g, '],\n$2[');
@@ -70,11 +103,20 @@ function repairAndParseJSON(text: string): any {
   // Fix unclosed strings at end of lines (add closing quote)
   repaired = repaired.replace(/"([^"]*?)(\n\s*["},\]])/g, '"$1"$2');
 
+  // Log state after repairs
+  trace('REPAIRED', `After repairs, first 100 chars: ${repaired.slice(0, 100).replace(/\n/g, '\\n')}`);
+  if (repaired.length > 30) {
+    const charCodes15to35 = Array.from(repaired.slice(15, 35)).map(c => c.charCodeAt(0));
+    trace('REPAIRED_CHARS', `Positions 15-35 char codes: [${charCodes15to35.join(',')}]`);
+  }
+
   // Second attempt with repairs
   try {
-    return JSON.parse(repaired);
+    const result = JSON.parse(repaired);
+    trace('SUCCESS', `Parsed after repairs`);
+    return result;
   } catch (secondError) {
-    console.log('Repaired JSON parse also failed, trying aggressive cleanup...');
+    trace('FAIL2', `Repaired parse failed: ${(secondError as Error).message}`);
   }
 
   // More aggressive cleanup
@@ -87,6 +129,8 @@ function repairAndParseJSON(text: string): any {
   const openBrackets = (repaired.match(/\[/g) || []).length;
   const closeBrackets = (repaired.match(/]/g) || []).length;
 
+  trace('BALANCE', `Braces: ${openBraces} open, ${closeBraces} close. Brackets: ${openBrackets} open, ${closeBrackets} close`);
+
   // Add missing closing braces/brackets
   for (let i = 0; i < openBraces - closeBraces; i++) {
     repaired += '}';
@@ -97,16 +141,20 @@ function repairAndParseJSON(text: string): any {
 
   // Final attempt
   try {
-    return JSON.parse(repaired);
+    const result = JSON.parse(repaired);
+    trace('SUCCESS', `Parsed after aggressive cleanup`);
+    return result;
   } catch (finalError) {
     // Log the problematic area
     const errorMatch = (finalError as Error).message.match(/position (\d+)/);
     if (errorMatch) {
       const pos = parseInt(errorMatch[1]);
-      const start = Math.max(0, pos - 100);
-      const end = Math.min(repaired.length, pos + 100);
-      console.error(`JSON error near position ${pos}:`);
-      console.error(`Context: ...${repaired.slice(start, end)}...`);
+      const start = Math.max(0, pos - 50);
+      const end = Math.min(repaired.length, pos + 50);
+      const context = repaired.slice(start, end);
+      const charCodesAroundError = Array.from(repaired.slice(Math.max(0, pos - 5), pos + 10)).map(c => c.charCodeAt(0));
+      trace('FAIL_FINAL', `Error at position ${pos}, context: ${context.replace(/\n/g, '\\n')}`);
+      trace('FAIL_CHARS', `Char codes around error (pos ${pos-5} to ${pos+10}): [${charCodesAroundError.join(',')}]`);
     }
     throw new Error(`Failed to parse JSON after repairs: ${(finalError as Error).message}`);
   }
@@ -407,7 +455,8 @@ async function analyzeContent(
   source: Source,
   niche: string,
   product: string,
-  strategy: string
+  strategy: string,
+  requestId: string
 ): Promise<{ claims: Claim[]; hooks: Hook[] }> {
   // Sanitize content to prevent JSON parsing issues
   const cleanContent = sanitizeContent(content);
@@ -535,23 +584,29 @@ Return your response as valid JSON with this exact structure:
 
   const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
 
+  console.log(`[${requestId}] Claude response received, length: ${responseText.length}`);
+
   // Sanitize Claude's response to remove any control characters before parsing
   // Belt and suspenders - catches anything that slipped through input sanitization
   const cleanResponseText = sanitizeContent(responseText);
 
+  console.log(`[${requestId}] After sanitization, length: ${cleanResponseText.length} (diff: ${responseText.length - cleanResponseText.length})`);
+
   // Parse JSON from response with repair logic
   if (!cleanResponseText.includes('{')) {
-    throw new AnalysisParseError('No JSON object found in response', responseText);
+    throw new AnalysisParseError('No JSON object found in response', responseText, requestId);
   }
 
   let parsed;
   try {
-    parsed = repairAndParseJSON(cleanResponseText);
+    parsed = repairAndParseJSON(cleanResponseText, requestId);
   } catch (parseError) {
     // Include raw response in error for debugging (original, not sanitized, for diagnosis)
     const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
-    throw new AnalysisParseError(errorMsg, responseText);
+    throw new AnalysisParseError(errorMsg, responseText, requestId);
   }
+
+  console.log(`[${requestId}] JSON parsed successfully, claims: ${parsed.claims?.length || 0}, hooks: ${parsed.hooks?.length || 0}`);
 
   // Validate the parsed structure
   if (!parsed.claims || !Array.isArray(parsed.claims)) {
@@ -641,12 +696,13 @@ Return your response as valid JSON with this exact structure:
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = generateRequestId();
   let body: AnalyzeRequest | null = null;
   try {
     body = await request.json();
     const { source, niche, product, strategy } = body!;
 
-    console.log(`Analyzing source: ${source.id} (${source.type})`);
+    console.log(`[${requestId}] START Analyzing source: ${source.id} (${source.type})`);
 
     // Check cache first
     let content: string | null = null;
@@ -656,9 +712,9 @@ export async function POST(request: NextRequest) {
     if (cachedResult) {
       content = cachedResult.content;
       cacheHit = true;
-      console.log(`[CACHE HIT] ${source.id}: Using cached content (${content.length} chars, hit #${cachedResult.hitCount})`);
+      console.log(`[${requestId}] [CACHE HIT] Using cached content (${content.length} chars, hit #${cachedResult.hitCount})`);
     } else {
-      console.log(`[CACHE MISS] ${source.id}: Fetching fresh content`);
+      console.log(`[${requestId}] [CACHE MISS] Fetching fresh content`);
 
       // Track fetch start time for cache stats
       const fetchStartTime = Date.now();
@@ -691,7 +747,7 @@ export async function POST(request: NextRequest) {
 
       // Cache the content if we got valid content
       if (content && content.length >= 100) {
-        console.log(`[CACHE STORE] ${source.id}: Caching content (${content.length} chars, fetched in ${fetchDurationMs}ms)`);
+        console.log(`[${requestId}] [CACHE STORE] Caching content (${content.length} chars, fetched in ${fetchDurationMs}ms)`);
         await setCachedContent(source.url, source.type as SourceType, content, fetchDurationMs);
       }
     }
@@ -699,7 +755,7 @@ export async function POST(request: NextRequest) {
     // If we couldn't get content, use Claude to analyze based on title/metadata
     // (Don't cache metadata fallbacks as they're not real content)
     if (!content || content.length < 100) {
-      console.log(`No content found for ${source.id}, using title/metadata fallback`);
+      console.log(`[${requestId}] No content found, using title/metadata fallback`);
       content = `Title: ${source.title}\nSource: ${source.url}\nType: ${source.type}`;
 
       // Ask Claude to use its knowledge to analyze
@@ -712,11 +768,13 @@ Based on this title and your knowledge of this topic, provide an analysis as if 
 
       content = metaPrompt;
     } else if (!cacheHit) {
-      console.log(`Content found for ${source.id}: ${content.length} chars`);
+      console.log(`[${requestId}] Content found: ${content.length} chars`);
     }
 
     // Run the analysis
-    const { claims, hooks } = await analyzeContent(content, source, niche, product, strategy);
+    console.log(`[${requestId}] Sending to Claude for analysis...`);
+    const { claims, hooks } = await analyzeContent(content, source, niche, product, strategy, requestId);
+    console.log(`[${requestId}] SUCCESS Analysis complete: ${claims.length} claims, ${hooks.length} hooks`);
 
     const result: AnalysisResult = {
       sourceId: source.id,
@@ -729,12 +787,13 @@ Based on this title and your knowledge of this topic, provide an analysis as if 
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Analyze API error:', error);
+    console.error(`[${requestId}] ERROR:`, error.message || error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const statusCode = error?.status || 500;
 
     // Build request data with optional raw response for parse errors
     const requestData: Record<string, unknown> = {
+      requestId,
       sourceId: body?.source?.id,
       sourceType: body?.source?.type,
     };
@@ -750,6 +809,7 @@ Based on this title and your knowledge of this topic, provide an analysis as if 
           charCodes10to30: Array.from(error.rawResponse.slice(10, 30)).map(c => c.charCodeAt(0)),
         };
       }
+      console.error(`[${requestId}] PARSE_ERROR rawResponse first 500 chars: ${error.rawResponse.slice(0, 500).replace(/\n/g, '\\n')}`);
     }
 
     // Log error to database
