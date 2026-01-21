@@ -101,7 +101,9 @@ function repairAndParseJSON(text: string, requestId: string): any {
   repaired = repaired.replace(/(\d)(\s*)\n(\s*)"(?=[a-zA-Z])/g, '$1,\n$3"');
 
   // Fix unclosed strings at end of lines (add closing quote)
-  repaired = repaired.replace(/"([^"]*?)(\n\s*["},\]])/g, '"$1"$2');
+  // IMPORTANT: Don't match content containing JSON structural chars {[]},
+  // as this can corrupt valid JSON when response is truncated
+  repaired = repaired.replace(/"([^"{}\[\]]*?)(\n\s*["},\]])/g, '"$1"$2');
 
   // Log state after repairs
   trace('REPAIRED', `After repairs, first 100 chars: ${repaired.slice(0, 100).replace(/\n/g, '\\n')}`);
