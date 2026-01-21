@@ -573,7 +573,7 @@ Return your response as valid JSON with this exact structure:
     (client) =>
       client.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        max_tokens: 16384,
         system: [
           {
             type: 'text',
