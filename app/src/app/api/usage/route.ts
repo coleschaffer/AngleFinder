@@ -1,9 +1,20 @@
-import { NextResponse } from 'next/server';
-import { getUsageSummary, clearAllUsage } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUsageSummary, getUsageSummaryForTimeframe, clearAllUsage, UsageTimeframe } from '@/lib/db';
 
 // GET /api/usage - Get usage summary
-export async function GET() {
+// Accepts optional ?timeframe=day|week|month|all parameter
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const timeframe = searchParams.get('timeframe') as UsageTimeframe | null;
+
+    // If timeframe is specified, use the new timeframe-based function
+    if (timeframe && ['day', 'week', 'month', 'all'].includes(timeframe)) {
+      const summary = await getUsageSummaryForTimeframe(timeframe);
+      return NextResponse.json(summary);
+    }
+
+    // Otherwise, return the legacy full summary for backwards compatibility
     const summary = await getUsageSummary();
     return NextResponse.json(summary);
   } catch (error) {

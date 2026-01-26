@@ -51,6 +51,10 @@ interface AnalyticsEvent {
   niche: string;
   sourceType: string;
   content?: string;
+  productDescription?: string;
+  strategy?: string;
+  sourceUrl?: string;
+  sourceName?: string;
   timestamp: string;
 }
 
@@ -150,6 +154,29 @@ interface ContentCacheStats {
   expiredCount: number;
 }
 
+// Timeframe-based usage summary for consolidated Usage tab
+type UsageTimeframe = 'day' | 'week' | 'month' | 'all';
+
+interface TimeframeUsageStats {
+  totalRequests: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheReadTokens: number;
+  totalCacheCreationTokens: number;
+  avgRequestDuration: number;
+  rateLimitedRequests: number;
+  byEndpoint: Record<string, number>;
+  primaryKeyUsage: number;
+  secondaryKeyUsage: number;
+}
+
+interface TimeframeUsageSummary {
+  timeframe: UsageTimeframe;
+  stats: TimeframeUsageStats;
+  activeSessions: number;
+  recentRequests: UsageEntry[];
+}
+
 type Tab = 'feedback' | 'analytics' | 'errors' | 'usage' | 'cache';
 
 const awarenessConfig = {
@@ -174,7 +201,8 @@ export default function AdminPage() {
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [errorsData, setErrorsData] = useState<ErrorsData | null>(null);
-  const [usageData, setUsageData] = useState<UsageSummary | null>(null);
+  const [usageData, setUsageData] = useState<TimeframeUsageSummary | null>(null);
+  const [usageTimeframe, setUsageTimeframe] = useState<UsageTimeframe>('day');
   const [cacheData, setCacheData] = useState<ContentCacheStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedErrorIds, setSelectedErrorIds] = useState<Set<string>>(new Set());
@@ -216,9 +244,9 @@ export default function AdminPage() {
     }
   };
 
-  const loadUsage = async () => {
+  const loadUsage = async (timeframe: UsageTimeframe = usageTimeframe) => {
     try {
-      const response = await fetch('/api/usage');
+      const response = await fetch(`/api/usage?timeframe=${timeframe}`);
       if (response.ok) {
         const data = await response.json();
         setUsageData(data);
@@ -226,6 +254,12 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error loading usage:', error);
     }
+  };
+
+  // Handle timeframe change
+  const handleTimeframeChange = async (newTimeframe: UsageTimeframe) => {
+    setUsageTimeframe(newTimeframe);
+    await loadUsage(newTimeframe);
   };
 
   const loadCache = async () => {
@@ -675,9 +709,9 @@ export default function AdminPage() {
             )}
           </div>
         ) : activeTab === 'usage' ? (
-          /* Usage Tab */
+          /* Usage Tab - Consolidated with Timeframe Selector */
           <div>
-            {!usageData || usageData.allTime.totalRequests === 0 ? (
+            {!usageData || usageData.stats.totalRequests === 0 ? (
               <div className="text-center py-20">
                 <Gauge className="w-12 h-12 text-[var(--ca-gray)] mx-auto mb-4" />
                 <p className="text-[var(--ca-gray-light)]">No usage data yet</p>
@@ -687,126 +721,124 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Real-time Status */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="card">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-4 h-4 text-green-400" />
-                      <span className="text-xs text-[var(--ca-gray-light)]">Active Sessions</span>
-                    </div>
-                    <div className="text-2xl font-bold text-green-400">{usageData.activeSessions}</div>
-                    <div className="text-xs text-[var(--ca-gray)] mt-1">Last 15 min</div>
+                {/* Active Sessions - Real-time, always visible */}
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-4 h-4 text-green-400" />
+                    <span className="text-xs text-[var(--ca-gray-light)]">Active Sessions</span>
                   </div>
-                  <div className="card">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Activity className="w-4 h-4 text-[var(--ca-gold)]" />
-                      <span className="text-xs text-[var(--ca-gray-light)]">Requests/Hour</span>
-                    </div>
-                    <div className="text-2xl font-bold text-[var(--ca-gold)]">{usageData.currentHour.totalRequests}</div>
-                    <div className="text-xs text-[var(--ca-gray)] mt-1">Current hour</div>
-                  </div>
-                  <div className="card">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-4 h-4 text-blue-400" />
-                      <span className="text-xs text-[var(--ca-gray-light)]">Avg Duration</span>
-                    </div>
-                    <div className="text-2xl font-bold text-blue-400">{formatDuration(usageData.currentHour.avgRequestDuration)}</div>
-                    <div className="text-xs text-[var(--ca-gray)] mt-1">Per request</div>
-                  </div>
-                  <div className="card">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-orange-400" />
-                      <span className="text-xs text-[var(--ca-gray-light)]">Rate Limits</span>
-                    </div>
-                    <div className="text-2xl font-bold text-orange-400">{usageData.rateLimits.rateLimitHitsLast24h}</div>
-                    <div className="text-xs text-[var(--ca-gray)] mt-1">Last 24h</div>
-                  </div>
+                  <div className="text-2xl font-bold text-green-400">{usageData.activeSessions}</div>
+                  <div className="text-xs text-[var(--ca-gray)] mt-1">Last 15 minutes (real-time)</div>
                 </div>
 
-                {/* Token Usage - Current Hour */}
+                {/* Timeframe Selector */}
+                <div className="flex gap-2 border-b border-[var(--ca-gray-dark)] pb-4">
+                  {(['day', 'week', 'month', 'all'] as const).map((tf) => (
+                    <button
+                      key={tf}
+                      onClick={() => handleTimeframeChange(tf)}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        usageTimeframe === tf
+                          ? 'bg-[var(--ca-gold)] text-black'
+                          : 'bg-[var(--ca-gray-dark)] text-[var(--ca-gray-light)] hover:bg-[var(--ca-gray)] hover:text-white'
+                      }`}
+                    >
+                      {tf === 'day' ? 'Day' : tf === 'week' ? 'Week' : tf === 'month' ? 'Month' : 'All Time'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Unified Stats Grid */}
                 <div className="card">
                   <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
-                    Token Usage (Current Hour)
+                    Usage Statistics
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <ArrowUpRight className="w-4 h-4 text-blue-400" />
-                        <span className="text-xs text-[var(--ca-gray-light)]">Input Tokens</span>
-                      </div>
-                      <div className="text-xl font-bold">{formatTokens(usageData.currentHour.totalInputTokens)}</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
+                      <Activity className="w-5 h-5 text-[var(--ca-gold)] mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-[var(--ca-gold)]">{usageData.stats.totalRequests.toLocaleString()}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Total Requests</div>
                     </div>
-                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <ArrowDownRight className="w-4 h-4 text-green-400" />
-                        <span className="text-xs text-[var(--ca-gray-light)]">Output Tokens</span>
-                      </div>
-                      <div className="text-xl font-bold">{formatTokens(usageData.currentHour.totalOutputTokens)}</div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
+                      <ArrowUpRight className="w-5 h-5 text-blue-400 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-blue-400">{formatTokens(usageData.stats.totalInputTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Input Tokens</div>
                     </div>
-                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Database className="w-4 h-4 text-purple-400" />
-                        <span className="text-xs text-[var(--ca-gray-light)]">Cache Read</span>
-                      </div>
-                      <div className="text-xl font-bold">{formatTokens(usageData.currentHour.totalCacheReadTokens)}</div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
+                      <ArrowDownRight className="w-5 h-5 text-green-400 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-green-400">{formatTokens(usageData.stats.totalOutputTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Output Tokens</div>
                     </div>
-                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Zap className="w-4 h-4 text-yellow-400" />
-                        <span className="text-xs text-[var(--ca-gray-light)]">Cache Created</span>
-                      </div>
-                      <div className="text-xl font-bold">{formatTokens(usageData.currentHour.totalCacheCreationTokens)}</div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
+                      <Database className="w-5 h-5 text-purple-400 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-purple-400">{formatTokens(usageData.stats.totalCacheReadTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Read</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
+                      <Zap className="w-5 h-5 text-yellow-400 mx-auto mb-2" />
+                      <div className="text-xl font-bold">{formatTokens(usageData.stats.totalCacheCreationTokens)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Created</div>
+                    </div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
+                      <Clock className="w-5 h-5 text-blue-400 mx-auto mb-2" />
+                      <div className="text-xl font-bold">{formatDuration(usageData.stats.avgRequestDuration)}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Avg Duration</div>
+                    </div>
+                    <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
+                      <AlertTriangle className="w-5 h-5 text-orange-400 mx-auto mb-2" />
+                      <div className="text-xl font-bold text-orange-400">{usageData.stats.rateLimitedRequests}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Rate Limited</div>
                     </div>
                   </div>
                 </div>
 
-                {/* API Key Usage */}
+                {/* API Key Distribution */}
                 <div className="card">
                   <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
-                    API Key Distribution (Current Hour)
+                    API Key Distribution
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Primary Key (Tier 4)</span>
-                        <span className="text-[var(--ca-gold)] font-bold">{usageData.rateLimits.primaryKeyUsage}</span>
+                        <span className="text-[var(--ca-gold)] font-bold">{usageData.stats.primaryKeyUsage}</span>
                       </div>
                       <div className="h-2 bg-[var(--ca-black)] rounded-full overflow-hidden">
                         <div
                           className="h-full bg-[var(--ca-gold)] rounded-full"
                           style={{
-                            width: `${Math.min(100, (usageData.rateLimits.primaryKeyUsage / 200) * 100)}%`
+                            width: `${Math.min(100, (usageData.stats.primaryKeyUsage / Math.max(usageData.stats.primaryKeyUsage + usageData.stats.secondaryKeyUsage, 1)) * 100)}%`
                           }}
                         />
                       </div>
-                      <div className="text-xs text-[var(--ca-gray)] mt-1">Target: ~200 req/min capacity</div>
                     </div>
                     <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Secondary Key (Tier 2)</span>
-                        <span className="text-purple-400 font-bold">{usageData.rateLimits.secondaryKeyUsage}</span>
+                        <span className="text-purple-400 font-bold">{usageData.stats.secondaryKeyUsage}</span>
                       </div>
                       <div className="h-2 bg-[var(--ca-black)] rounded-full overflow-hidden">
                         <div
                           className="h-full bg-purple-400 rounded-full"
                           style={{
-                            width: `${Math.min(100, (usageData.rateLimits.secondaryKeyUsage / 45) * 100)}%`
+                            width: `${Math.min(100, (usageData.stats.secondaryKeyUsage / Math.max(usageData.stats.primaryKeyUsage + usageData.stats.secondaryKeyUsage, 1)) * 100)}%`
                           }}
                         />
                       </div>
-                      <div className="text-xs text-[var(--ca-gray)] mt-1">Target: ~45 req/min capacity</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Requests by Endpoint */}
-                {Object.keys(usageData.currentHour.byEndpoint).length > 0 && (
+                {Object.keys(usageData.stats.byEndpoint).length > 0 && (
                   <div className="card">
                     <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
-                      Requests by Endpoint (Current Hour)
+                      Requests by Endpoint
                     </h3>
                     <div className="space-y-2">
-                      {Object.entries(usageData.currentHour.byEndpoint)
+                      {Object.entries(usageData.stats.byEndpoint)
                         .sort(([, a], [, b]) => b - a)
                         .map(([endpoint, count]) => (
                           <div key={endpoint} className="flex items-center justify-between bg-[var(--ca-gray-dark)] rounded-lg p-3">
@@ -821,61 +853,7 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* 24 Hour Summary */}
-                <div className="card">
-                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
-                    Last 24 Hours Summary
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-[var(--ca-gold)]">{usageData.last24Hours.totalRequests}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Total Requests</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-400">{formatTokens(usageData.last24Hours.totalInputTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Input Tokens</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-400">{formatTokens(usageData.last24Hours.totalOutputTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Output Tokens</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-400">{formatTokens(usageData.last24Hours.totalCacheReadTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Hits</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* All Time Stats */}
-                <div className="card">
-                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
-                    All Time Statistics
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div className="text-center">
-                      <div className="text-xl font-bold">{usageData.allTime.totalRequests.toLocaleString()}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Total Requests</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-bold">{formatTokens(usageData.allTime.totalInputTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Input Tokens</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-bold">{formatTokens(usageData.allTime.totalOutputTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Output Tokens</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-bold">{formatTokens(usageData.allTime.totalCacheReadTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Read</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-bold">{formatTokens(usageData.allTime.totalCacheCreationTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Created</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Requests */}
+                {/* Recent Requests - Always shows last 50 */}
                 <div className="card">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider">
@@ -1195,72 +1173,6 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="card">
-                    <div className="text-2xl font-bold text-[var(--ca-gold)]">{analytics.totalEvents}</div>
-                    <div className="text-xs text-[var(--ca-gray-light)] mt-1">Total Events</div>
-                  </div>
-                  <div className="card">
-                    <div className="text-2xl font-bold text-[#22C55E]">{analytics.byAwarenessLevel.hidden}</div>
-                    <div className="flex items-center gap-1 text-xs text-[var(--ca-gray-light)] mt-1">
-                      <EyeOff className="w-3 h-3" />
-                      Hidden Ideas
-                    </div>
-                  </div>
-                  <div className="card">
-                    <div className="text-2xl font-bold text-[#EAB308]">{analytics.byAwarenessLevel.emerging}</div>
-                    <div className="flex items-center gap-1 text-xs text-[var(--ca-gray-light)] mt-1">
-                      <TrendingUp className="w-3 h-3" />
-                      Emerging Ideas
-                    </div>
-                  </div>
-                  <div className="card">
-                    <div className="text-2xl font-bold text-[#EF4444]">{analytics.byAwarenessLevel.known}</div>
-                    <div className="flex items-center gap-1 text-xs text-[var(--ca-gray-light)] mt-1">
-                      <Eye className="w-3 h-3" />
-                      Known Ideas
-                    </div>
-                  </div>
-                </div>
-
-                {/* Awareness Level Breakdown */}
-                <div className="card">
-                  <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
-                    Awareness Level Distribution
-                  </h3>
-                  <div className="space-y-3">
-                    {(['hidden', 'emerging', 'known'] as const).map((level) => {
-                      const config = awarenessConfig[level];
-                      const count = analytics.byAwarenessLevel[level];
-                      const total = analytics.byAwarenessLevel.hidden + analytics.byAwarenessLevel.emerging + analytics.byAwarenessLevel.known;
-                      const percentage = total > 0 ? (count / total) * 100 : 0;
-                      const LevelIcon = config.Icon;
-
-                      return (
-                        <div key={level}>
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <div className="flex items-center gap-2">
-                              <LevelIcon className="w-4 h-4" style={{ color: config.color }} />
-                              <span style={{ color: config.color }}>{config.label}</span>
-                            </div>
-                            <span className="text-[var(--ca-gray-light)]">{count} ({percentage.toFixed(1)}%)</span>
-                          </div>
-                          <div className="h-2 bg-[var(--ca-gray-dark)] rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${percentage}%`,
-                                backgroundColor: config.color,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 {/* Event Type Breakdown */}
                 <div className="card">
                   <h3 className="text-sm font-medium text-[var(--ca-gray-light)] uppercase tracking-wider mb-4">
@@ -1326,25 +1238,69 @@ export default function AdminPage() {
                               {format(new Date(event.timestamp), 'MMM d · h:mm a')}
                             </div>
                           </summary>
-                          {event.content && (
-                            <div className="px-3 pb-3 pt-1 border-t border-[var(--ca-gray-dark)]">
-                              <p className="text-sm text-[var(--ca-gray-light)] italic">
-                                &ldquo;{event.content}&rdquo;
-                              </p>
-                              {event.niche && (
-                                <p className="text-xs text-[var(--ca-gray)] mt-2">
-                                  Niche: {event.niche}
+                          <div className="px-3 pb-3 pt-2 border-t border-[var(--ca-gray-dark)] space-y-3">
+                            {/* Content (Hook headline or Claim) */}
+                            {event.content && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">
+                                  {event.itemType === 'hook' ? 'Hook Headline' : 'Claim'}
                                 </p>
+                                <p className="text-sm text-white">
+                                  &ldquo;{event.content}&rdquo;
+                                </p>
+                              </div>
+                            )}
+
+                            {/* User Query Context */}
+                            <div className="grid grid-cols-2 gap-3">
+                              {event.niche && (
+                                <div>
+                                  <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Niche</p>
+                                  <p className="text-sm text-[var(--ca-gray-light)]">{event.niche}</p>
+                                </div>
+                              )}
+                              {event.strategy && (
+                                <div>
+                                  <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Strategy</p>
+                                  <p className="text-sm text-[var(--ca-gray-light)] capitalize">{event.strategy}</p>
+                                </div>
                               )}
                             </div>
-                          )}
-                          {!event.content && (
-                            <div className="px-3 pb-3 pt-1 border-t border-[var(--ca-gray-dark)]">
+
+                            {/* Product Description */}
+                            {event.productDescription && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Product</p>
+                                <p className="text-sm text-[var(--ca-gray-light)]">{event.productDescription}</p>
+                              </div>
+                            )}
+
+                            {/* Source Info */}
+                            {(event.sourceName || event.sourceUrl) && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Source</p>
+                                {event.sourceUrl ? (
+                                  <a
+                                    href={event.sourceUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-[var(--ca-gold)] hover:underline"
+                                  >
+                                    {event.sourceName || event.sourceUrl}
+                                  </a>
+                                ) : (
+                                  <p className="text-sm text-[var(--ca-gray-light)]">{event.sourceName}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* No content fallback */}
+                            {!event.content && !event.productDescription && !event.sourceName && (
                               <p className="text-xs text-[var(--ca-gray)]">
-                                Content not available (older event)
+                                Detailed context not available (older event)
                               </p>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </details>
                       );
                     })}

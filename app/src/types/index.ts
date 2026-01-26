@@ -211,5 +211,9 @@ export interface AnalyticsEvent {
   niche: string;
   sourceType: SourceType;
   content?: string;
+  productDescription?: string;
+  strategy?: string;
+  sourceUrl?: string;
+  sourceName?: string;
   timestamp: string;
 }

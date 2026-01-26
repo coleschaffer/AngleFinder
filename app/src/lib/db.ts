@@ -44,6 +44,20 @@ export async function initDatabase() {
       ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS content TEXT
     `);
 
+    // Add new context columns for richer analytics (migration for existing tables)
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS product_description TEXT
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS strategy VARCHAR(100)
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS source_url TEXT
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS source_name VARCHAR(255)
+    `);
+
     // Create index for faster analytics queries
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_analytics_awareness ON analytics_events (awareness_level);
@@ -109,6 +123,10 @@ export interface AnalyticsEventInput {
   niche?: string;
   sourceType?: SourceType;
   content?: string;
+  productDescription?: string;
+  strategy?: string;
+  sourceUrl?: string;
+  sourceName?: string;
 }
 
 export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<void> {
@@ -116,8 +134,8 @@ export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<v
   const id = crypto.randomUUID();
   await pool.query(
     `INSERT INTO analytics_events
-     (id, event_type, item_id, item_type, awareness_level, momentum_score, is_sweet_spot, niche, source_type, content, timestamp)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+     (id, event_type, item_id, item_type, awareness_level, momentum_score, is_sweet_spot, niche, source_type, content, product_description, strategy, source_url, source_name, timestamp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
       id,
       event.eventType,
@@ -129,6 +147,10 @@ export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<v
       event.niche || null,
       event.sourceType || null,
       event.content || null,
+      event.productDescription || null,
+      event.strategy || null,
+      event.sourceUrl || null,
+      event.sourceName || null,
       new Date().toISOString(),
     ]
   );
@@ -179,7 +201,10 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
     SELECT
       id, event_type as "eventType", item_id as "itemId", item_type as "itemType",
       awareness_level as "awarenessLevel", momentum_score as "momentumScore",
-      niche, source_type as "sourceType", content, timestamp
+      niche, source_type as "sourceType", content,
+      product_description as "productDescription", strategy,
+      source_url as "sourceUrl", source_name as "sourceName",
+      timestamp
     FROM analytics_events
     ORDER BY timestamp DESC
     LIMIT 50
@@ -648,6 +673,138 @@ export async function getUsageSummary(): Promise<UsageSummary> {
 
 export async function clearAllUsage(): Promise<void> {
   await pool.query('DELETE FROM api_usage');
+}
+
+// Timeframe-based usage summary for the new consolidated Usage tab
+export type UsageTimeframe = 'day' | 'week' | 'month' | 'all';
+
+export interface TimeframeUsageStats {
+  totalRequests: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheReadTokens: number;
+  totalCacheCreationTokens: number;
+  avgRequestDuration: number;
+  rateLimitedRequests: number;
+  byEndpoint: Record<string, number>;
+  primaryKeyUsage: number;
+  secondaryKeyUsage: number;
+}
+
+export interface TimeframeUsageSummary {
+  timeframe: UsageTimeframe;
+  stats: TimeframeUsageStats;
+  activeSessions: number;
+  recentRequests: UsageEntry[];
+}
+
+export async function getUsageSummaryForTimeframe(timeframe: UsageTimeframe): Promise<TimeframeUsageSummary> {
+  await initUsageTable();
+
+  // Determine the interval based on timeframe
+  let intervalClause = '';
+  switch (timeframe) {
+    case 'day':
+      intervalClause = "WHERE timestamp > NOW() - INTERVAL '24 hours'";
+      break;
+    case 'week':
+      intervalClause = "WHERE timestamp > NOW() - INTERVAL '7 days'";
+      break;
+    case 'month':
+      intervalClause = "WHERE timestamp > NOW() - INTERVAL '30 days'";
+      break;
+    case 'all':
+      intervalClause = ''; // No filter for all time
+      break;
+  }
+
+  // Get stats for the selected timeframe
+  const statsResult = await pool.query(`
+    SELECT
+      COUNT(*) as total_requests,
+      COALESCE(SUM(input_tokens), 0) as total_input_tokens,
+      COALESCE(SUM(output_tokens), 0) as total_output_tokens,
+      COALESCE(SUM(cache_read_tokens), 0) as total_cache_read_tokens,
+      COALESCE(SUM(cache_creation_tokens), 0) as total_cache_creation_tokens,
+      COALESCE(AVG(request_duration_ms), 0) as avg_duration,
+      COUNT(CASE WHEN was_rate_limited THEN 1 END) as rate_limited
+    FROM api_usage
+    ${intervalClause}
+  `);
+  const statsRow = statsResult.rows[0];
+
+  // By endpoint for the selected timeframe
+  const byEndpointResult = await pool.query(`
+    SELECT endpoint, COUNT(*) as count
+    FROM api_usage
+    ${intervalClause}
+    GROUP BY endpoint
+  `);
+  const byEndpoint: Record<string, number> = {};
+  byEndpointResult.rows.forEach((row: { endpoint: string; count: string }) => {
+    byEndpoint[row.endpoint] = parseInt(row.count, 10);
+  });
+
+  // API key usage for the selected timeframe
+  const keyUsageResult = await pool.query(`
+    SELECT
+      api_key_used,
+      COUNT(*) as count
+    FROM api_usage
+    ${intervalClause}
+    ${intervalClause ? 'AND' : 'WHERE'} api_key_used IS NOT NULL
+    GROUP BY api_key_used
+  `);
+  let primaryKeyUsage = 0;
+  let secondaryKeyUsage = 0;
+  keyUsageResult.rows.forEach((row: { api_key_used: string; count: string }) => {
+    if (row.api_key_used === 'primary') primaryKeyUsage = parseInt(row.count, 10);
+    if (row.api_key_used === 'secondary') secondaryKeyUsage = parseInt(row.count, 10);
+  });
+
+  // Active sessions (always last 15 minutes - real-time metric)
+  const activeSessionsResult = await pool.query(`
+    SELECT COUNT(DISTINCT session_id) as count
+    FROM api_usage
+    WHERE timestamp > NOW() - INTERVAL '15 minutes'
+    AND session_id IS NOT NULL
+  `);
+  const activeSessions = parseInt(activeSessionsResult.rows[0].count, 10);
+
+  // Recent requests (always last 50)
+  const recentResult = await pool.query(`
+    SELECT
+      id, endpoint, model, input_tokens as "inputTokens", output_tokens as "outputTokens",
+      cache_read_tokens as "cacheReadTokens", cache_creation_tokens as "cacheCreationTokens",
+      total_tokens as "totalTokens", request_duration_ms as "requestDurationMs",
+      api_key_used as "apiKeyUsed", was_rate_limited as "wasRateLimited",
+      session_id as "sessionId", timestamp
+    FROM api_usage
+    ORDER BY timestamp DESC
+    LIMIT 50
+  `);
+  const recentRequests: UsageEntry[] = recentResult.rows.map((row: Record<string, unknown>) => ({
+    ...row,
+    timestamp: (row.timestamp as Date).toISOString(),
+  })) as UsageEntry[];
+
+  return {
+    timeframe,
+    stats: {
+      totalRequests: parseInt(statsRow.total_requests, 10),
+      totalInputTokens: parseInt(statsRow.total_input_tokens, 10),
+      totalOutputTokens: parseInt(statsRow.total_output_tokens, 10),
+      totalCacheReadTokens: parseInt(statsRow.total_cache_read_tokens, 10),
+      totalCacheCreationTokens: parseInt(statsRow.total_cache_creation_tokens, 10),
+      avgRequestDuration: Math.round(parseFloat(statsRow.avg_duration)),
+      rateLimitedRequests: parseInt(statsRow.rate_limited, 10),
+      byEndpoint,
+      primaryKeyUsage,
+      secondaryKeyUsage,
+    },
+    activeSessions,
+    recentRequests,
+  };
 }
 
 // ============================================

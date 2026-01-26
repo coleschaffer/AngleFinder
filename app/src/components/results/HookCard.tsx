@@ -110,6 +110,10 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
           niche: wizard?.customNiche || wizard?.niche,
           sourceType,
           content: hook.headline,
+          productDescription: wizard?.productDescription,
+          strategy: wizard?.strategy,
+          sourceUrl,
+          sourceName,
         }),
       });
     } catch (error) {
