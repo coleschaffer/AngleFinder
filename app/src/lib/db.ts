@@ -58,6 +58,44 @@ export async function initDatabase() {
       ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS source_name VARCHAR(255)
     `);
 
+    // Add rich hook/claim data columns for comprehensive analytics
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS bridge TEXT
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS bridge_distance VARCHAR(50)
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS angle_types JSONB
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS big_idea_summary TEXT
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS virality_scores JSONB
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS sample_ad_opener TEXT
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS awareness_reasoning TEXT
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS momentum_signals JSONB
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS source_claim TEXT
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS exact_quote TEXT
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS surprise_score INTEGER
+    `);
+    await client.query(`
+      ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS mechanism TEXT
+    `);
+
     // Create index for faster analytics queries
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_analytics_awareness ON analytics_events (awareness_level);
@@ -127,6 +165,27 @@ export interface AnalyticsEventInput {
   strategy?: string;
   sourceUrl?: string;
   sourceName?: string;
+  // Rich hook data
+  bridge?: string;
+  bridgeDistance?: string;
+  angleTypes?: string[];
+  bigIdeaSummary?: string;
+  viralityScores?: {
+    easyToUnderstand: number;
+    emotional: number;
+    curiosityInducing: number;
+    contrarian: number;
+    provable: number;
+    total: number;
+  };
+  sampleAdOpener?: string;
+  awarenessReasoning?: string;
+  momentumSignals?: string[];
+  sourceClaim?: string;
+  // Rich claim data
+  exactQuote?: string;
+  surpriseScore?: number;
+  mechanism?: string;
 }
 
 export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<void> {
@@ -134,8 +193,10 @@ export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<v
   const id = crypto.randomUUID();
   await pool.query(
     `INSERT INTO analytics_events
-     (id, event_type, item_id, item_type, awareness_level, momentum_score, is_sweet_spot, niche, source_type, content, product_description, strategy, source_url, source_name, timestamp)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+     (id, event_type, item_id, item_type, awareness_level, momentum_score, is_sweet_spot, niche, source_type, content, product_description, strategy, source_url, source_name,
+      bridge, bridge_distance, angle_types, big_idea_summary, virality_scores, sample_ad_opener, awareness_reasoning, momentum_signals, source_claim,
+      exact_quote, surprise_score, mechanism, timestamp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)`,
     [
       id,
       event.eventType,
@@ -151,6 +212,18 @@ export async function trackAnalyticsEvent(event: AnalyticsEventInput): Promise<v
       event.strategy || null,
       event.sourceUrl || null,
       event.sourceName || null,
+      event.bridge || null,
+      event.bridgeDistance || null,
+      event.angleTypes ? JSON.stringify(event.angleTypes) : null,
+      event.bigIdeaSummary || null,
+      event.viralityScores ? JSON.stringify(event.viralityScores) : null,
+      event.sampleAdOpener || null,
+      event.awarenessReasoning || null,
+      event.momentumSignals ? JSON.stringify(event.momentumSignals) : null,
+      event.sourceClaim || null,
+      event.exactQuote || null,
+      event.surpriseScore ?? null,
+      event.mechanism || null,
       new Date().toISOString(),
     ]
   );
@@ -204,6 +277,11 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
       niche, source_type as "sourceType", content,
       product_description as "productDescription", strategy,
       source_url as "sourceUrl", source_name as "sourceName",
+      bridge, bridge_distance as "bridgeDistance", angle_types as "angleTypes",
+      big_idea_summary as "bigIdeaSummary", virality_scores as "viralityScores",
+      sample_ad_opener as "sampleAdOpener", awareness_reasoning as "awarenessReasoning",
+      momentum_signals as "momentumSignals", source_claim as "sourceClaim",
+      exact_quote as "exactQuote", surprise_score as "surpriseScore", mechanism,
       timestamp
     FROM analytics_events
     ORDER BY timestamp DESC
