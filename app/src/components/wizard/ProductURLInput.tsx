@@ -155,15 +155,15 @@ export function ProductURLInput() {
           </button>
 
           {showSaved && (
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               {savedProductURLs.map((saved) => (
                 <div
                   key={saved.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ca-gray-dark)]/50 hover:bg-[var(--ca-gray-dark)] transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ca-gray-dark)]/50 hover:bg-[var(--ca-gray-dark)] transition-colors min-w-0"
                 >
                   <button
                     onClick={() => handleSelectSaved(saved)}
-                    className="text-sm font-medium truncate max-w-[200px]"
+                    className="text-sm font-medium truncate flex-1 text-left min-w-0"
                   >
                     {saved.productName}
                   </button>
@@ -172,7 +172,7 @@ export function ProductURLInput() {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="p-0.5 rounded hover:bg-[var(--ca-gold)]/20 text-[var(--ca-gray-light)] hover:text-[var(--ca-gold)] transition-all"
+                    className="p-0.5 rounded hover:bg-[var(--ca-gold)]/20 text-[var(--ca-gray-light)] hover:text-[var(--ca-gold)] transition-all flex-shrink-0"
                     title="Open URL"
                   >
                     <ExternalLink className="w-3 h-3" />
@@ -182,7 +182,7 @@ export function ProductURLInput() {
                       e.stopPropagation();
                       setDeleteConfirmId(saved.id);
                     }}
-                    className="p-0.5 rounded hover:bg-red-500/20 text-[var(--ca-gray-light)] hover:text-red-400 transition-all"
+                    className="p-0.5 rounded hover:bg-red-500/20 text-[var(--ca-gray-light)] hover:text-red-400 transition-all flex-shrink-0"
                     title="Remove"
                   >
                     <Trash2 className="w-3 h-3" />
