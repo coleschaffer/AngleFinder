@@ -721,16 +721,6 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Active Sessions - Real-time, always visible */}
-                <div className="card">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="w-4 h-4 text-green-400" />
-                    <span className="text-xs text-[var(--ca-gray-light)]">Active Sessions</span>
-                  </div>
-                  <div className="text-2xl font-bold text-green-400">{usageData.activeSessions}</div>
-                  <div className="text-xs text-[var(--ca-gray)] mt-1">Last 15 minutes (real-time)</div>
-                </div>
-
                 {/* Timeframe Selector */}
                 <div className="flex gap-2 border-b border-[var(--ca-gray-dark)] pb-4">
                   {(['day', 'week', 'month', 'all'] as const).map((tf) => (
