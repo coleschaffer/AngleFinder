@@ -10,17 +10,17 @@ interface StepIndicatorProps {
 
 export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndicatorProps) {
   return (
-    <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6 md:mb-8 overflow-x-auto px-2">
+    <div className="flex items-center justify-center gap-1 sm:gap-2 mb-6 md:mb-8 px-2">
       {Array.from({ length: totalSteps }, (_, i) => {
         const stepNum = i + 1;
         const isCompleted = stepNum < currentStep;
         const isCurrent = stepNum === currentStep;
 
         return (
-          <div key={stepNum} className="flex items-center flex-shrink-0">
-            <div className="flex flex-col items-center">
+          <div key={stepNum} className="flex items-center">
+            <div className="flex flex-col items-center min-w-0">
               <div
-                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all ${
+                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all flex-shrink-0 ${
                   isCompleted
                     ? 'bg-[var(--ca-gold)] text-[var(--ca-black)]'
                     : isCurrent
@@ -30,9 +30,9 @@ export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndic
               >
                 {isCompleted ? <Check className="w-3 h-3 sm:w-4 sm:h-4" /> : stepNum}
               </div>
-              {/* Hide labels on mobile, show on sm+ */}
+              {/* Hide labels until lg breakpoint (1024px) to avoid cutoff at half-screen */}
               <span
-                className={`hidden sm:block text-xs mt-1 whitespace-nowrap ${
+                className={`hidden lg:block text-xs mt-1 whitespace-nowrap ${
                   isCurrent ? 'text-[var(--ca-gold)]' : 'text-[var(--ca-gray-light)]'
                 }`}
               >
@@ -41,7 +41,7 @@ export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndic
             </div>
             {stepNum < totalSteps && (
               <div
-                className={`w-4 sm:w-8 md:w-12 h-0.5 mx-1 sm:mx-2 ${
+                className={`w-4 sm:w-6 lg:w-12 h-0.5 mx-1 sm:mx-2 flex-shrink-0 ${
                   isCompleted ? 'bg-[var(--ca-gold)]' : 'bg-[var(--ca-gray-dark)]'
                 }`}
               />
