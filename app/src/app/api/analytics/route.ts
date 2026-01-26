@@ -19,6 +19,20 @@ export async function POST(request: NextRequest) {
       strategy: body.strategy,
       sourceUrl: body.sourceUrl,
       sourceName: body.sourceName,
+      // Rich hook data
+      bridge: body.bridge,
+      bridgeDistance: body.bridgeDistance,
+      angleTypes: body.angleTypes,
+      bigIdeaSummary: body.bigIdeaSummary,
+      viralityScores: body.viralityScores,
+      sampleAdOpener: body.sampleAdOpener,
+      awarenessReasoning: body.awarenessReasoning,
+      momentumSignals: body.momentumSignals,
+      sourceClaim: body.sourceClaim,
+      // Rich claim data
+      exactQuote: body.exactQuote,
+      surpriseScore: body.surpriseScore,
+      mechanism: body.mechanism,
     };
 
     await trackAnalyticsEvent(event);

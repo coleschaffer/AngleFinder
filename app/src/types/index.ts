@@ -215,5 +215,19 @@ export interface AnalyticsEvent {
   strategy?: string;
   sourceUrl?: string;
   sourceName?: string;
+  // Rich hook data
+  bridge?: string;
+  bridgeDistance?: BridgeDistance;
+  angleTypes?: AngleType[];
+  bigIdeaSummary?: string;
+  viralityScores?: ViralityScore;
+  sampleAdOpener?: string;
+  awarenessReasoning?: string;
+  momentumSignals?: string[];
+  sourceClaim?: string;
+  // Rich claim data
+  exactQuote?: string;
+  surpriseScore?: number;
+  mechanism?: string;
   timestamp: string;
 }

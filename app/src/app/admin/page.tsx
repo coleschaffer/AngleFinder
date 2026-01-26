@@ -41,6 +41,15 @@ interface FeedbackItem {
   userAgent: string;
 }
 
+interface ViralityScore {
+  easyToUnderstand: number;
+  emotional: number;
+  curiosityInducing: number;
+  contrarian: number;
+  provable: number;
+  total: number;
+}
+
 interface AnalyticsEvent {
   id: string;
   eventType: string;
@@ -55,6 +64,20 @@ interface AnalyticsEvent {
   strategy?: string;
   sourceUrl?: string;
   sourceName?: string;
+  // Rich hook data
+  bridge?: string;
+  bridgeDistance?: string;
+  angleTypes?: string[];
+  bigIdeaSummary?: string;
+  viralityScores?: ViralityScore;
+  sampleAdOpener?: string;
+  awarenessReasoning?: string;
+  momentumSignals?: string[];
+  sourceClaim?: string;
+  // Rich claim data
+  exactQuote?: string;
+  surpriseScore?: number;
+  mechanism?: string;
   timestamp: string;
 }
 
@@ -1235,9 +1258,163 @@ export default function AdminPage() {
                                 <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">
                                   {event.itemType === 'hook' ? 'Hook Headline' : 'Claim'}
                                 </p>
-                                <p className="text-sm text-white">
+                                <p className="text-sm text-white font-medium">
                                   &ldquo;{event.content}&rdquo;
                                 </p>
+                              </div>
+                            )}
+
+                            {/* Classification & Scores */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              <div className="bg-[var(--ca-black)] rounded-lg p-2 text-center">
+                                <p className="text-xs text-[var(--ca-gray)] mb-1">Awareness</p>
+                                <p className="text-sm font-medium capitalize" style={{ color: config.color }}>{event.awarenessLevel}</p>
+                              </div>
+                              <div className="bg-[var(--ca-black)] rounded-lg p-2 text-center">
+                                <p className="text-xs text-[var(--ca-gray)] mb-1">Momentum</p>
+                                <p className="text-sm font-medium text-[var(--ca-gold)]">{event.momentumScore}/10</p>
+                              </div>
+                              {event.viralityScores && (
+                                <div className="bg-[var(--ca-black)] rounded-lg p-2 text-center">
+                                  <p className="text-xs text-[var(--ca-gray)] mb-1">Virality</p>
+                                  <p className="text-sm font-medium text-green-400">{event.viralityScores.total}/50</p>
+                                </div>
+                              )}
+                              {event.bridgeDistance && (
+                                <div className="bg-[var(--ca-black)] rounded-lg p-2 text-center">
+                                  <p className="text-xs text-[var(--ca-gray)] mb-1">Bridge</p>
+                                  <p className="text-sm font-medium text-purple-400">{event.bridgeDistance}</p>
+                                </div>
+                              )}
+                              {event.surpriseScore !== undefined && (
+                                <div className="bg-[var(--ca-black)] rounded-lg p-2 text-center">
+                                  <p className="text-xs text-[var(--ca-gray)] mb-1">Surprise</p>
+                                  <p className="text-sm font-medium text-blue-400">{event.surpriseScore}/10</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Angle Types */}
+                            {event.angleTypes && event.angleTypes.length > 0 && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Angle Types</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {event.angleTypes.map((type, i) => (
+                                    <span key={i} className="px-2 py-0.5 text-xs bg-[var(--ca-gold)]/20 text-[var(--ca-gold)] rounded-full">
+                                      {type}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Source Claim (for hooks) */}
+                            {event.sourceClaim && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Source Claim</p>
+                                <p className="text-sm text-[var(--ca-gray-light)]">{event.sourceClaim}</p>
+                              </div>
+                            )}
+
+                            {/* The Bridge (for hooks) */}
+                            {event.bridge && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">The Bridge</p>
+                                <div className="bg-[var(--ca-black)] rounded-lg p-3">
+                                  <p className="text-sm text-[var(--ca-gray-light)]">{event.bridge}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Big Idea Summary (for hooks) */}
+                            {event.bigIdeaSummary && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Big Idea Summary</p>
+                                <p className="text-sm text-[var(--ca-gray-light)]">{event.bigIdeaSummary}</p>
+                              </div>
+                            )}
+
+                            {/* Exact Quote (for claims) */}
+                            {event.exactQuote && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Exact Quote</p>
+                                <blockquote className="text-sm italic text-[var(--ca-gray-light)] pl-3 border-l-2 border-[var(--ca-gold)]">
+                                  &ldquo;{event.exactQuote}&rdquo;
+                                </blockquote>
+                              </div>
+                            )}
+
+                            {/* Mechanism (for claims) */}
+                            {event.mechanism && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Mechanism</p>
+                                <p className="text-sm text-[var(--ca-gray-light)]">{event.mechanism}</p>
+                              </div>
+                            )}
+
+                            {/* Awareness Reasoning */}
+                            {event.awarenessReasoning && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Awareness Reasoning</p>
+                                <p className="text-sm text-[var(--ca-gray-light)]">{event.awarenessReasoning}</p>
+                              </div>
+                            )}
+
+                            {/* Momentum Signals */}
+                            {event.momentumSignals && event.momentumSignals.length > 0 && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Momentum Signals</p>
+                                <ul className="space-y-1">
+                                  {event.momentumSignals.map((signal, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-sm text-[var(--ca-gray-light)]">
+                                      <span className="text-[var(--ca-gold)] mt-0.5">•</span>
+                                      {signal}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Virality Score Breakdown (for hooks) */}
+                            {event.viralityScores && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-2">Virality Breakdown</p>
+                                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                                  <div className="bg-[var(--ca-black)] rounded p-2 text-center">
+                                    <div className="text-sm font-bold text-[var(--ca-gold)]">{event.viralityScores.easyToUnderstand}</div>
+                                    <div className="text-[10px] text-[var(--ca-gray)]">Easy</div>
+                                  </div>
+                                  <div className="bg-[var(--ca-black)] rounded p-2 text-center">
+                                    <div className="text-sm font-bold text-[var(--ca-gold)]">{event.viralityScores.emotional}</div>
+                                    <div className="text-[10px] text-[var(--ca-gray)]">Emotion</div>
+                                  </div>
+                                  <div className="bg-[var(--ca-black)] rounded p-2 text-center">
+                                    <div className="text-sm font-bold text-[var(--ca-gold)]">{event.viralityScores.curiosityInducing}</div>
+                                    <div className="text-[10px] text-[var(--ca-gray)]">Curiosity</div>
+                                  </div>
+                                  <div className="bg-[var(--ca-black)] rounded p-2 text-center">
+                                    <div className="text-sm font-bold text-[var(--ca-gold)]">{event.viralityScores.contrarian}</div>
+                                    <div className="text-[10px] text-[var(--ca-gray)]">Contrarian</div>
+                                  </div>
+                                  <div className="bg-[var(--ca-black)] rounded p-2 text-center">
+                                    <div className="text-sm font-bold text-[var(--ca-gold)]">{event.viralityScores.provable}</div>
+                                    <div className="text-[10px] text-[var(--ca-gray)]">Provable</div>
+                                  </div>
+                                  <div className="bg-[var(--ca-gold)]/20 rounded p-2 text-center">
+                                    <div className="text-sm font-bold text-[var(--ca-gold)]">{event.viralityScores.total}</div>
+                                    <div className="text-[10px] text-[var(--ca-gold)]">Total</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Sample Ad Opener (for hooks) */}
+                            {event.sampleAdOpener && (
+                              <div>
+                                <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Sample Ad Opener</p>
+                                <div className="bg-[var(--ca-gold)]/5 border border-[var(--ca-gold)]/20 rounded-lg p-3">
+                                  <p className="text-sm text-[var(--ca-gray-light)] whitespace-pre-line">{event.sampleAdOpener}</p>
+                                </div>
                               </div>
                             )}
 
@@ -1253,6 +1430,12 @@ export default function AdminPage() {
                                 <div>
                                   <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Strategy</p>
                                   <p className="text-sm text-[var(--ca-gray-light)] capitalize">{event.strategy}</p>
+                                </div>
+                              )}
+                              {event.sourceType && (
+                                <div>
+                                  <p className="text-xs text-[var(--ca-gray)] uppercase tracking-wide mb-1">Source Type</p>
+                                  <p className="text-sm text-[var(--ca-gray-light)] capitalize">{event.sourceType}</p>
                                 </div>
                               )}
                             </div>
@@ -1285,7 +1468,7 @@ export default function AdminPage() {
                             )}
 
                             {/* No content fallback */}
-                            {!event.content && !event.productDescription && !event.sourceName && (
+                            {!event.content && !event.productDescription && !event.sourceName && !event.bridge && !event.exactQuote && (
                               <p className="text-xs text-[var(--ca-gray)]">
                                 Detailed context not available (older event)
                               </p>

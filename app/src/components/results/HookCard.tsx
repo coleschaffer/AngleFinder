@@ -114,6 +114,16 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
           strategy: wizard?.strategy,
           sourceUrl,
           sourceName,
+          // Rich hook data
+          bridge: hook.bridge,
+          bridgeDistance: hook.bridgeDistance,
+          angleTypes: hook.angleTypes,
+          bigIdeaSummary: hook.bigIdeaSummary,
+          viralityScores: hook.viralityScore,
+          sampleAdOpener: hook.sampleAdOpener,
+          awarenessReasoning: hook.awarenessReasoning,
+          momentumSignals: momentumSignals,
+          sourceClaim: hook.sourceClaim,
         }),
       });
     } catch (error) {

@@ -106,6 +106,12 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
           strategy: wizard.strategy,
           sourceUrl,
           sourceName,
+          // Rich claim data
+          exactQuote: claim.exactQuote,
+          surpriseScore: claim.surpriseScore,
+          mechanism: claim.mechanism,
+          awarenessReasoning: claim.awarenessReasoning,
+          momentumSignals: momentumSignals,
         }),
       });
     } catch (error) {
