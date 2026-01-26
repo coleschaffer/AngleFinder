@@ -783,16 +783,16 @@ export default function AdminPage() {
                       <div className="text-xs text-[var(--ca-gray-light)]">Output Tokens</div>
                     </div>
                     <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
-                      <Database className="w-5 h-5 text-purple-400 mx-auto mb-2" />
-                      <div className="text-2xl font-bold text-purple-400">{formatTokens(usageData.stats.totalCacheReadTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Read</div>
+                      <HardDrive className="w-5 h-5 text-purple-400 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-purple-400">{cacheData?.totalEntries || 0}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Sources Cached</div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
-                      <Zap className="w-5 h-5 text-yellow-400 mx-auto mb-2" />
-                      <div className="text-xl font-bold">{formatTokens(usageData.stats.totalCacheCreationTokens)}</div>
-                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Created</div>
+                      <CheckCircle className="w-5 h-5 text-green-400 mx-auto mb-2" />
+                      <div className="text-xl font-bold text-green-400">{cacheData?.totalHits || 0}</div>
+                      <div className="text-xs text-[var(--ca-gray-light)]">Cache Hits</div>
                     </div>
                     <div className="bg-[var(--ca-gray-dark)] rounded-lg p-4 text-center">
                       <Clock className="w-5 h-5 text-blue-400 mx-auto mb-2" />
