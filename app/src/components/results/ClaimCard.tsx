@@ -102,6 +102,10 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
           niche: wizard.customNiche || wizard.niche,
           sourceType,
           content: claim.claim,
+          productDescription: wizard.productDescription,
+          strategy: wizard.strategy,
+          sourceUrl,
+          sourceName,
         }),
       });
     } catch (error) {

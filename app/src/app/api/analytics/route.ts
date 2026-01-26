@@ -15,6 +15,10 @@ export async function POST(request: NextRequest) {
       niche: body.niche,
       sourceType: body.sourceType,
       content: body.content,
+      productDescription: body.productDescription,
+      strategy: body.strategy,
+      sourceUrl: body.sourceUrl,
+      sourceName: body.sourceName,
     };
 
     await trackAnalyticsEvent(event);
