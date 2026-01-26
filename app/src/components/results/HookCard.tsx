@@ -202,8 +202,39 @@ export function HookCard({ hook, sourceName, sourceType, sourceUrl }: HookCardPr
       setVariationFeedback('');
       setResultsView('generated');
 
-      // Track variation generation
-      trackAnalytics('hook_variation_generated');
+      // Track variation generation with the VARIATION's data (not the original hook)
+      try {
+        await fetch('/api/analytics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventType: 'hook_variation_generated',
+            itemId: variationHook.id,
+            itemType: 'hook',
+            awarenessLevel: variationHook.awarenessLevel || 'emerging',
+            momentumScore: variationHook.momentumScore || 5,
+            niche: wizard?.customNiche || wizard?.niche,
+            sourceType,
+            content: variationHook.headline,
+            productDescription: wizard?.productDescription,
+            strategy: wizard?.strategy,
+            sourceUrl,
+            sourceName,
+            // Rich variation hook data
+            bridge: variationHook.bridge,
+            bridgeDistance: variationHook.bridgeDistance,
+            angleTypes: variationHook.angleTypes,
+            bigIdeaSummary: variationHook.bigIdeaSummary,
+            viralityScores: variationHook.viralityScore,
+            sampleAdOpener: variationHook.sampleAdOpener,
+            awarenessReasoning: variationHook.awarenessReasoning,
+            momentumSignals: variationHook.momentumSignals || [],
+            sourceClaim: variationHook.sourceClaim,
+          }),
+        });
+      } catch (error) {
+        console.error('Analytics tracking error:', error);
+      }
     } catch (error) {
       console.error('Variation error:', error);
     } finally {

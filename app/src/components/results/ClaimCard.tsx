@@ -150,8 +150,39 @@ export function ClaimCard({ claim, sourceName, sourceType, sourceUrl }: ClaimCar
       addGeneratedHook(generatedHook);
       setResultsView('generated');
 
-      // Track hook generation from claim
-      trackAnalytics('hook_generated_from_claim');
+      // Track hook generation with the GENERATED HOOK's data (not the original claim)
+      try {
+        await fetch('/api/analytics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventType: 'hook_generated_from_claim',
+            itemId: generatedHook.id,
+            itemType: 'hook',
+            awarenessLevel: generatedHook.awarenessLevel || 'emerging',
+            momentumScore: generatedHook.momentumScore || 5,
+            niche: wizard.customNiche || wizard.niche,
+            sourceType,
+            content: generatedHook.headline,
+            productDescription: wizard.productDescription,
+            strategy: wizard.strategy,
+            sourceUrl,
+            sourceName,
+            // Rich generated hook data
+            bridge: generatedHook.bridge,
+            bridgeDistance: generatedHook.bridgeDistance,
+            angleTypes: generatedHook.angleTypes,
+            bigIdeaSummary: generatedHook.bigIdeaSummary,
+            viralityScores: generatedHook.viralityScore,
+            sampleAdOpener: generatedHook.sampleAdOpener,
+            awarenessReasoning: generatedHook.awarenessReasoning,
+            momentumSignals: generatedHook.momentumSignals || [],
+            sourceClaim: generatedHook.sourceClaim,
+          }),
+        });
+      } catch (error) {
+        console.error('Analytics tracking error:', error);
+      }
     } catch (error) {
       console.error('Generate hook error:', error);
     } finally {
